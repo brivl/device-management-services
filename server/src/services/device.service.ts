@@ -51,21 +51,20 @@ export const deviceService = {
       version: number;
     },
   ) {
-    const device = await this.get(deviceId, userId);
-    if (data.version !== device.version)
-      throw new ConflictError("Version mismatch");
+    await this.get(deviceId, userId);
 
     const now = new Date().toISOString();
-    const updated = deviceRepository.update(deviceId, {
+    const updated = deviceRepository.updateWithVersion(deviceId, data.version, {
       ...(data.status !== undefined && {
         status: data.status as "enabled" | "sleep" | "off",
       }),
       ...(data.configuration !== undefined && {
         configuration: data.configuration,
       }),
-      version: device.version + 1,
+      version: data.version + 1,
       updatedAt: now,
     });
+    if (!updated) throw new ConflictError("Version mismatch");
 
     deviceRepository.createHistory({
       deviceId,

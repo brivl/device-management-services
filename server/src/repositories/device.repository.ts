@@ -43,6 +43,22 @@ export const deviceRepository = {
       .get();
   },
 
+  // Atomically updates only if current version matches — returns undefined on mismatch.
+  updateWithVersion(
+    deviceId: string,
+    expectedVersion: number,
+    data: Partial<DeviceInsert>,
+  ): DeviceRow | undefined {
+    return db
+      .update(devices)
+      .set(data)
+      .where(
+        and(eq(devices.id, deviceId), eq(devices.version, expectedVersion)),
+      )
+      .returning()
+      .get();
+  },
+
   createUserDevice(userId: string, deviceId: string): void {
     db.insert(userDevices).values({ userId, deviceId }).run();
   },

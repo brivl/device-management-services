@@ -37,4 +37,32 @@ export async function deviceRoutes(app: FastifyInstance) {
       );
     },
   );
+
+  app.patch<{ Params: { deviceId: string } }>("/:deviceId", {
+    schema: {
+      body: {
+        type: "object",
+        required: ["version"],
+        properties: {
+          status: { type: "string", enum: ["enabled", "sleep", "off"] },
+          configuration: { type: "object" },
+          version: { type: "integer", minimum: 0 },
+        },
+      },
+    },
+    handler: async (request, reply) => {
+      const body = request.body as {
+        status?: "enabled" | "sleep" | "off";
+        configuration?: Record<string, unknown>;
+        version: number;
+      };
+      return reply.send(
+        await deviceService.update(
+          request.params.deviceId,
+          request.userId,
+          body,
+        ),
+      );
+    },
+  });
 }

@@ -1,18 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("../../src/repositories/device.repository.js", () => ({
+vi.mock("../../src/repositories/device.repository.ts", () => ({
   deviceRepository: {
     findAllByUserId: vi.fn(),
     findById: vi.fn(),
     isOwnedByUser: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    updateWithVersion: vi.fn(),
     createUserDevice: vi.fn(),
     createHistory: vi.fn(),
   },
 }));
 
-vi.mock("../../src/sse/device-broadcaster.js", () => ({
+vi.mock("../../src/sse/device-broadcaster.ts", () => ({
   deviceBroadcaster: { broadcast: vi.fn() },
 }));
 
@@ -114,6 +115,7 @@ describe("deviceService.update", () => {
   it("throws ConflictError on version mismatch", async () => {
     repo.findById.mockReturnValue(DEVICE);
     repo.isOwnedByUser.mockReturnValue(true);
+    repo.updateWithVersion.mockReturnValue(undefined); // simulates DB version mismatch
     await expect(
       deviceService.update("device-1", "user-1", { version: 1, status: "off" }),
     ).rejects.toThrow(ConflictError);
@@ -123,13 +125,14 @@ describe("deviceService.update", () => {
     repo.findById.mockReturnValue(DEVICE);
     repo.isOwnedByUser.mockReturnValue(true);
     const updated = { ...DEVICE, version: 3, status: "off" as const };
-    repo.update.mockReturnValue(updated);
+    repo.updateWithVersion.mockReturnValue(updated);
     await deviceService.update("device-1", "user-1", {
       version: 2,
       status: "off",
     });
-    expect(repo.update).toHaveBeenCalledWith(
+    expect(repo.updateWithVersion).toHaveBeenCalledWith(
       "device-1",
+      2,
       expect.objectContaining({ version: 3 }),
     );
   });
@@ -138,7 +141,7 @@ describe("deviceService.update", () => {
     repo.findById.mockReturnValue(DEVICE);
     repo.isOwnedByUser.mockReturnValue(true);
     const updated = { ...DEVICE, version: 3 };
-    repo.update.mockReturnValue(updated);
+    repo.updateWithVersion.mockReturnValue(updated);
     await deviceService.update("device-1", "user-1", {
       version: 2,
       status: "off",
@@ -156,7 +159,7 @@ describe("deviceService.update", () => {
     repo.findById.mockReturnValue(DEVICE);
     repo.isOwnedByUser.mockReturnValue(true);
     const updated = { ...DEVICE, version: 3 };
-    repo.update.mockReturnValue(updated);
+    repo.updateWithVersion.mockReturnValue(updated);
     await deviceService.update("device-1", "user-1", {
       version: 2,
       status: "off",
