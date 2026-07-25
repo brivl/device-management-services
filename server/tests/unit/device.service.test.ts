@@ -21,11 +21,8 @@ import { deviceBroadcaster } from "../../src/sse/device-broadcaster.js";
 import { deviceService } from "../../src/services/device.service.js";
 import { NotFoundError, ConflictError } from "../../src/errors.js";
 
-const repo = deviceRepository as Record<string, ReturnType<typeof vi.fn>>;
-const broadcaster = deviceBroadcaster as Record<
-  string,
-  ReturnType<typeof vi.fn>
->;
+const repo = vi.mocked(deviceRepository);
+const broadcaster = vi.mocked(deviceBroadcaster);
 
 const DEVICE = {
   id: "device-1",
