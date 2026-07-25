@@ -54,7 +54,7 @@ export const deviceService = {
     await this.get(deviceId, userId);
 
     const now = new Date().toISOString();
-    const updated = deviceRepository.updateWithVersion(deviceId, data.version, {
+    const updated = deviceRepository.update(deviceId, data.version, {
       ...(data.status !== undefined && {
         status: data.status as "enabled" | "sleep" | "off",
       }),
@@ -79,8 +79,6 @@ export const deviceService = {
 
   async delete(deviceId: string, userId: string) {
     await this.get(deviceId, userId);
-    return deviceRepository.update(deviceId, {
-      deletedAt: new Date().toISOString(),
-    });
+    return deviceRepository.softDelete(deviceId, new Date().toISOString());
   },
 };

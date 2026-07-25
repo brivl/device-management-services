@@ -7,7 +7,7 @@ vi.mock("../../src/repositories/device.repository.ts", () => ({
     isOwnedByUser: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
-    updateWithVersion: vi.fn(),
+    softDelete: vi.fn(),
     createUserDevice: vi.fn(),
     createHistory: vi.fn(),
   },
@@ -115,7 +115,7 @@ describe("deviceService.update", () => {
   it("throws ConflictError on version mismatch", async () => {
     repo.findById.mockReturnValue(DEVICE);
     repo.isOwnedByUser.mockReturnValue(true);
-    repo.updateWithVersion.mockReturnValue(undefined); // simulates DB version mismatch
+    repo.update.mockReturnValue(undefined); // simulates DB version mismatch
     await expect(
       deviceService.update("device-1", "user-1", { version: 1, status: "off" }),
     ).rejects.toThrow(ConflictError);
@@ -125,12 +125,12 @@ describe("deviceService.update", () => {
     repo.findById.mockReturnValue(DEVICE);
     repo.isOwnedByUser.mockReturnValue(true);
     const updated = { ...DEVICE, version: 3, status: "off" as const };
-    repo.updateWithVersion.mockReturnValue(updated);
+    repo.update.mockReturnValue(updated);
     await deviceService.update("device-1", "user-1", {
       version: 2,
       status: "off",
     });
-    expect(repo.updateWithVersion).toHaveBeenCalledWith(
+    expect(repo.update).toHaveBeenCalledWith(
       "device-1",
       2,
       expect.objectContaining({ version: 3 }),
@@ -141,7 +141,7 @@ describe("deviceService.update", () => {
     repo.findById.mockReturnValue(DEVICE);
     repo.isOwnedByUser.mockReturnValue(true);
     const updated = { ...DEVICE, version: 3 };
-    repo.updateWithVersion.mockReturnValue(updated);
+    repo.update.mockReturnValue(updated);
     await deviceService.update("device-1", "user-1", {
       version: 2,
       status: "off",
@@ -159,7 +159,7 @@ describe("deviceService.update", () => {
     repo.findById.mockReturnValue(DEVICE);
     repo.isOwnedByUser.mockReturnValue(true);
     const updated = { ...DEVICE, version: 3 };
-    repo.updateWithVersion.mockReturnValue(updated);
+    repo.update.mockReturnValue(updated);
     await deviceService.update("device-1", "user-1", {
       version: 2,
       status: "off",
@@ -172,14 +172,14 @@ describe("deviceService.delete", () => {
   it("soft-deletes by setting deletedAt", async () => {
     repo.findById.mockReturnValue(DEVICE);
     repo.isOwnedByUser.mockReturnValue(true);
-    repo.update.mockReturnValue({
+    repo.softDelete.mockReturnValue({
       ...DEVICE,
       deletedAt: "2024-01-02T00:00:00.000Z",
     });
     await deviceService.delete("device-1", "user-1");
-    expect(repo.update).toHaveBeenCalledWith(
+    expect(repo.softDelete).toHaveBeenCalledWith(
       "device-1",
-      expect.objectContaining({ deletedAt: expect.any(String) }),
+      expect.any(String),
     );
   });
 

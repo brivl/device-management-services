@@ -34,17 +34,8 @@ export const deviceRepository = {
     return db.insert(devices).values(device).returning().get();
   },
 
-  update(deviceId: string, data: Partial<DeviceInsert>): DeviceRow {
-    return db
-      .update(devices)
-      .set(data)
-      .where(eq(devices.id, deviceId))
-      .returning()
-      .get();
-  },
-
   // Atomically updates only if current version matches — returns undefined on mismatch.
-  updateWithVersion(
+  update(
     deviceId: string,
     expectedVersion: number,
     data: Partial<DeviceInsert>,
@@ -55,6 +46,15 @@ export const deviceRepository = {
       .where(
         and(eq(devices.id, deviceId), eq(devices.version, expectedVersion)),
       )
+      .returning()
+      .get();
+  },
+
+  softDelete(deviceId: string, deletedAt: string): DeviceRow {
+    return db
+      .update(devices)
+      .set({ deletedAt })
+      .where(eq(devices.id, deviceId))
       .returning()
       .get();
   },
