@@ -7,7 +7,7 @@ vi.mock("../../src/repositories/device.repository.ts", () => ({
     isOwnedByUser: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
-    softDelete: vi.fn(),
+    delete: vi.fn(),
     createUserDevice: vi.fn(),
     createHistory: vi.fn(),
   },
@@ -172,12 +172,12 @@ describe("deviceService.delete", () => {
   it("soft-deletes by setting deletedAt", async () => {
     repo.findById.mockReturnValue(DEVICE);
     repo.isOwnedByUser.mockReturnValue(true);
-    repo.softDelete.mockReturnValue({
+    repo.delete.mockReturnValue({
       ...DEVICE,
       deletedAt: "2024-01-02T00:00:00.000Z",
     });
     await deviceService.delete("device-1", "user-1");
-    expect(repo.softDelete).toHaveBeenCalledWith(
+    expect(repo.delete).toHaveBeenCalledWith(
       "device-1",
       expect.any(String),
     );

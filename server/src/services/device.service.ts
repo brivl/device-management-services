@@ -79,6 +79,6 @@ export const deviceService = {
 
   async delete(deviceId: string, userId: string) {
     await this.get(deviceId, userId);
-    return deviceRepository.softDelete(deviceId, new Date().toISOString());
+    return deviceRepository.delete(deviceId, new Date().toISOString());
   },
 };

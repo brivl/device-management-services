@@ -50,7 +50,7 @@ export const deviceRepository = {
       .get();
   },
 
-  softDelete(deviceId: string, deletedAt: string): DeviceRow {
+  delete(deviceId: string, deletedAt: string): DeviceRow {
     return db
       .update(devices)
       .set({ deletedAt })
