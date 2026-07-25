@@ -34,10 +34,26 @@ export const deviceRepository = {
     return db.insert(devices).values(device).returning().get();
   },
 
-  update(deviceId: string, data: Partial<DeviceInsert>): DeviceRow {
+  // Atomically updates only if current version matches — returns undefined on mismatch.
+  update(
+    deviceId: string,
+    expectedVersion: number,
+    data: Partial<DeviceInsert>,
+  ): DeviceRow | undefined {
     return db
       .update(devices)
       .set(data)
+      .where(
+        and(eq(devices.id, deviceId), eq(devices.version, expectedVersion)),
+      )
+      .returning()
+      .get();
+  },
+
+  softDelete(deviceId: string, deletedAt: string): DeviceRow {
+    return db
+      .update(devices)
+      .set({ deletedAt })
       .where(eq(devices.id, deviceId))
       .returning()
       .get();

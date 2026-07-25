@@ -1,18 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("../../src/repositories/device.repository.js", () => ({
+vi.mock("../../src/repositories/device.repository.ts", () => ({
   deviceRepository: {
     findAllByUserId: vi.fn(),
     findById: vi.fn(),
     isOwnedByUser: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
+    softDelete: vi.fn(),
     createUserDevice: vi.fn(),
     createHistory: vi.fn(),
   },
 }));
 
-vi.mock("../../src/sse/device-broadcaster.js", () => ({
+vi.mock("../../src/sse/device-broadcaster.ts", () => ({
   deviceBroadcaster: { broadcast: vi.fn() },
 }));
 
@@ -114,6 +115,7 @@ describe("deviceService.update", () => {
   it("throws ConflictError on version mismatch", async () => {
     repo.findById.mockReturnValue(DEVICE);
     repo.isOwnedByUser.mockReturnValue(true);
+    repo.update.mockReturnValue(undefined); // simulates DB version mismatch
     await expect(
       deviceService.update("device-1", "user-1", { version: 1, status: "off" }),
     ).rejects.toThrow(ConflictError);
@@ -130,6 +132,7 @@ describe("deviceService.update", () => {
     });
     expect(repo.update).toHaveBeenCalledWith(
       "device-1",
+      2,
       expect.objectContaining({ version: 3 }),
     );
   });
@@ -169,14 +172,14 @@ describe("deviceService.delete", () => {
   it("soft-deletes by setting deletedAt", async () => {
     repo.findById.mockReturnValue(DEVICE);
     repo.isOwnedByUser.mockReturnValue(true);
-    repo.update.mockReturnValue({
+    repo.softDelete.mockReturnValue({
       ...DEVICE,
       deletedAt: "2024-01-02T00:00:00.000Z",
     });
     await deviceService.delete("device-1", "user-1");
-    expect(repo.update).toHaveBeenCalledWith(
+    expect(repo.softDelete).toHaveBeenCalledWith(
       "device-1",
-      expect.objectContaining({ deletedAt: expect.any(String) }),
+      expect.any(String),
     );
   });
 
