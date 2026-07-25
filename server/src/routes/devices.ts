@@ -75,25 +75,16 @@ export async function deviceRoutes(app: FastifyInstance) {
     },
   );
 
-  // reply.hijack() takes control of the raw socket — Fastify won't touch the response after this.
-  // proxy_buffering off in nginx is required for SSE to work through a reverse proxy.
   app.get<{ Params: { deviceId: string } }>(
     "/:deviceId/events",
+    { sse: "only" },
     async (request, reply) => {
       const { deviceId } = request.params;
-      reply.hijack();
-      const res = reply.raw;
-      res.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-        "Access-Control-Allow-Origin": "*",
-      });
-      res.write(":\n\n");
-      deviceBroadcaster.subscribe(deviceId, res);
-      request.raw.on("close", () =>
-        deviceBroadcaster.unsubscribe(deviceId, res),
-      );
+      reply.sse.keepAlive();
+      const sender = (data: unknown) =>
+        reply.sse.send({ event: "device-updated", data });
+      deviceBroadcaster.subscribe(deviceId, sender);
+      reply.sse.onClose(() => deviceBroadcaster.unsubscribe(deviceId, sender));
     },
   );
 }

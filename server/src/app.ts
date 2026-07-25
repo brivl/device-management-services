@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import sse from "@fastify/sse";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { authMiddleware } from "./middleware/auth.ts";
@@ -8,6 +9,7 @@ import { deviceRoutes } from "./routes/devices.ts";
 export function buildApp() {
   const app = Fastify({ logger: true });
   app.register(cors, { origin: true });
+  app.register(sse);
   app.register(swagger, {
     openapi: {
       info: { title: "Device Management API", version: "1.0.0" },
