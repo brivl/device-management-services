@@ -1,5 +1,5 @@
-import { db } from "./index.js";
-import { users } from "./schema.js";
+import { db } from "./index.ts";
+import { users } from "./schema.ts";
 
 export const SEEDED_USERS = [
   { id: "user-alice-0000-0000-000000000001", name: "Alice" },
