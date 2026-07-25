@@ -9,6 +9,8 @@ declare module "fastify" {
   }
 }
 
+// Auth simulation: validates X-User-Id against seeded users in the DB.
+// In a real system this would verify a JWT or session token.
 export async function authMiddleware(
   request: FastifyRequest,
   reply: FastifyReply,
