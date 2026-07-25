@@ -24,4 +24,8 @@ export async function deviceRoutes(app: FastifyInstance) {
       return reply.status(201).send(device);
     },
   });
+
+  app.get("/", async (request, reply) => {
+    return reply.send(await deviceService.list(request.userId));
+  });
 }
