@@ -65,4 +65,12 @@ export async function deviceRoutes(app: FastifyInstance) {
       );
     },
   });
+
+  app.delete<{ Params: { deviceId: string } }>(
+    "/:deviceId",
+    async (request, reply) => {
+      await deviceService.delete(request.params.deviceId, request.userId);
+      return reply.status(204).send();
+    },
+  );
 }
