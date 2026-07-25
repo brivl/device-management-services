@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { deviceService } from "../services/device.service.ts";
+import { deviceBroadcaster } from "../sse/device-broadcaster.ts";
 
 export async function deviceRoutes(app: FastifyInstance) {
   app.post("/", {
@@ -71,6 +72,28 @@ export async function deviceRoutes(app: FastifyInstance) {
     async (request, reply) => {
       await deviceService.delete(request.params.deviceId, request.userId);
       return reply.status(204).send();
+    },
+  );
+
+  // reply.hijack() takes control of the raw socket — Fastify won't touch the response after this.
+  // proxy_buffering off in nginx is required for SSE to work through a reverse proxy.
+  app.get<{ Params: { deviceId: string } }>(
+    "/:deviceId/events",
+    async (request, reply) => {
+      const { deviceId } = request.params;
+      reply.hijack();
+      const res = reply.raw;
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        "Access-Control-Allow-Origin": "*",
+      });
+      res.write(":\n\n");
+      deviceBroadcaster.subscribe(deviceId, res);
+      request.raw.on("close", () =>
+        deviceBroadcaster.unsubscribe(deviceId, res),
+      );
     },
   );
 }
