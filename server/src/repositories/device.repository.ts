@@ -1,6 +1,6 @@
 import { eq, and, isNull } from "drizzle-orm";
-import { db } from "../db/index.js";
-import { devices, deviceHistory, userDevices } from "../db/schema.js";
+import { db } from "../db/index.ts";
+import { devices, deviceHistory, userDevices } from "../db/schema.ts";
 
 export type DeviceRow = typeof devices.$inferSelect;
 export type DeviceInsert = typeof devices.$inferInsert;

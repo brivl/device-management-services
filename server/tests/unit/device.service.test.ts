@@ -16,10 +16,10 @@ vi.mock("../../src/sse/device-broadcaster.js", () => ({
   deviceBroadcaster: { broadcast: vi.fn() },
 }));
 
-import { deviceRepository } from "../../src/repositories/device.repository.js";
-import { deviceBroadcaster } from "../../src/sse/device-broadcaster.js";
-import { deviceService } from "../../src/services/device.service.js";
-import { NotFoundError, ConflictError } from "../../src/errors.js";
+import { deviceRepository } from "../../src/repositories/device.repository.ts";
+import { deviceBroadcaster } from "../../src/sse/device-broadcaster.ts";
+import { deviceService } from "../../src/services/device.service.ts";
+import { NotFoundError, ConflictError } from "../../src/errors.ts";
 
 const repo = vi.mocked(deviceRepository);
 const broadcaster = vi.mocked(deviceBroadcaster);

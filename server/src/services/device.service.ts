@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
-import { deviceRepository } from "../repositories/device.repository.js";
-import { deviceBroadcaster } from "../sse/device-broadcaster.js";
-import { NotFoundError, ConflictError } from "../errors.js";
+import { deviceRepository } from "../repositories/device.repository.ts";
+import { deviceBroadcaster } from "../sse/device-broadcaster.ts";
+import { NotFoundError, ConflictError } from "../errors.ts";
 
 const defaultConfiguration = { brightness: 100, mode: "auto" };
 
