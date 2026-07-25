@@ -1,21 +1,20 @@
-import type { ServerResponse } from "http";
+type Sender = (data: unknown) => void;
 
-const subscribers = new Map<string, Set<ServerResponse>>();
+const subscribers = new Map<string, Set<Sender>>();
 
 export const deviceBroadcaster = {
-  subscribe(deviceId: string, res: ServerResponse): void {
+  subscribe(deviceId: string, sender: Sender): void {
     if (!subscribers.has(deviceId)) subscribers.set(deviceId, new Set());
-    subscribers.get(deviceId)!.add(res);
+    subscribers.get(deviceId)!.add(sender);
   },
 
-  unsubscribe(deviceId: string, res: ServerResponse): void {
-    subscribers.get(deviceId)?.delete(res);
+  unsubscribe(deviceId: string, sender: Sender): void {
+    subscribers.get(deviceId)?.delete(sender);
   },
 
   broadcast(deviceId: string, data: unknown): void {
     const subs = subscribers.get(deviceId);
     if (!subs || subs.size === 0) return;
-    const payload = `event: device-updated\ndata: ${JSON.stringify(data)}\n\n`;
-    for (const res of subs) res.write(payload);
+    for (const sender of subs) sender(data);
   },
 };
