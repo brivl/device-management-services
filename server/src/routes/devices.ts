@@ -28,4 +28,13 @@ export async function deviceRoutes(app: FastifyInstance) {
   app.get("/", async (request, reply) => {
     return reply.send(await deviceService.list(request.userId));
   });
+
+  app.get<{ Params: { deviceId: string } }>(
+    "/:deviceId",
+    async (request, reply) => {
+      return reply.send(
+        await deviceService.get(request.params.deviceId, request.userId),
+      );
+    },
+  );
 }
