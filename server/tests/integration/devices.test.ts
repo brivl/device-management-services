@@ -69,10 +69,11 @@ describe("POST /devices", () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it("returns 401 when X-User-Id header is missing", async () => {
+  it("returns 401 when X-User-Id is an unknown user", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/devices",
+      headers: { "x-user-id": "unknown-user-id" },
       payload: { name: "Light", status: "enabled" },
     });
     expect(res.statusCode).toBe(401);
