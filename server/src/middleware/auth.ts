@@ -1,8 +1,8 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { eq } from "drizzle-orm";
+import { SEEDED_USERS } from "@dms/common";
 import { db } from "../db/index.ts";
 import { users } from "../db/schema.ts";
-import { SEEDED_USERS } from "../db/seed.ts";
 
 declare module "fastify" {
   interface FastifyRequest {

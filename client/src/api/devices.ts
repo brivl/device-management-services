@@ -1,27 +1,6 @@
-export type DeviceStatus = "enabled" | "sleep" | "off";
+import type { Device, CreateDeviceInput, UpdateDeviceInput } from "@dms/common";
 
-export interface Device {
-  id: string;
-  name: string;
-  status: DeviceStatus;
-  configuration: Record<string, unknown>;
-  version: number;
-  userId: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateDeviceInput {
-  name: string;
-  status: DeviceStatus;
-  configuration?: Record<string, unknown>;
-}
-
-export interface UpdateDeviceInput {
-  status?: DeviceStatus;
-  configuration?: Record<string, unknown>;
-  version: number;
-}
+export type { Device, CreateDeviceInput, UpdateDeviceInput };
 
 const BASE = "/api/devices";
 
@@ -70,6 +49,6 @@ export const devicesApi = {
       headers: { "X-User-Id": userId },
     }),
 
-  // EventSource doesn't support custom headers; header is now optional on the server (defaults to Alice).
+  // EventSource doesn't support custom headers; header is optional on the server (defaults to Alice).
   events: (id: string) => new EventSource(`${BASE}/${id}/events`),
 };

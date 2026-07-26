@@ -1,11 +1,6 @@
+import { SEEDED_USERS } from "@dms/common";
 import { db } from "./index.ts";
 import { users } from "./schema.ts";
-
-export const SEEDED_USERS = [
-  { id: "user-alice-0000-0000-000000000001", name: "Alice" },
-  { id: "user-bob-00000-0000-000000000002", name: "Bob" },
-  { id: "user-carol-000-0000-000000000003", name: "Carol" },
-];
 
 export async function seed() {
   for (const user of SEEDED_USERS) {

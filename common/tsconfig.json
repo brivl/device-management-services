@@ -5,12 +5,7 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "noEmit": true,
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "paths": {
-      "@dms/common": ["../common/src/index.ts"]
-    }
+    "strict": true
   },
-  "include": ["src", "tests"]
+  "include": ["src"]
 }
