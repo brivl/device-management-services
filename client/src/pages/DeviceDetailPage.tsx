@@ -17,11 +17,38 @@ import {
   Typography,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/Delete";
 import WifiIcon from "@mui/icons-material/Wifi";
 import WifiOffIcon from "@mui/icons-material/WifiOff";
 import type { Device, DeviceStatus } from "@dms/common/types";
 import { devicesApi } from "../api/devices";
 import { useUser } from "../context/UserContext";
+
+type ConfigEntry = { key: string; value: string };
+
+function coerce(value: string): unknown {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  const n = Number(value);
+  if (value.trim() !== "" && !isNaN(n)) return n;
+  return value;
+}
+
+function toEntries(config: Record<string, unknown>): ConfigEntry[] {
+  return Object.entries(config).map(([key, value]) => ({
+    key,
+    value: String(value),
+  }));
+}
+
+function fromEntries(entries: ConfigEntry[]): Record<string, unknown> {
+  return Object.fromEntries(
+    entries
+      .filter((e) => e.key.trim())
+      .map(({ key, value }) => [key, coerce(value)]),
+  );
+}
 
 const statusColor = (s: DeviceStatus): "success" | "warning" | "default" =>
   s === "enabled" ? "success" : s === "sleep" ? "warning" : "default";
@@ -34,19 +61,14 @@ export function DeviceDetailPage() {
   const [device, setDevice] = useState<Device | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-
-  // SSE
   const [sseConnected, setSseConnected] = useState(false);
 
-  // Edit form — initialised from device on first load; SSE updates don't reset it
   const [editStatus, setEditStatus] = useState<DeviceStatus>("enabled");
-  const [editConfig, setEditConfig] = useState("");
-  const [configError, setConfigError] = useState<string | null>(null);
+  const [configEntries, setConfigEntries] = useState<ConfigEntry[]>([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Fetch on mount / userId change
   useEffect(() => {
     if (!deviceId) return;
     setLoading(true);
@@ -56,7 +78,7 @@ export function DeviceDetailPage() {
       .then((d) => {
         setDevice(d);
         setEditStatus(d.status);
-        setEditConfig(JSON.stringify(d.configuration, null, 2));
+        setConfigEntries(toEntries(d.configuration));
       })
       .catch((e: unknown) =>
         setFetchError(e instanceof Error ? e.message : "Failed to load device"),
@@ -64,7 +86,6 @@ export function DeviceDetailPage() {
       .finally(() => setLoading(false));
   }, [userId, deviceId]);
 
-  // SSE subscription — updates device state only, preserving form edits
   useEffect(() => {
     if (!deviceId) return;
     const es = devicesApi.events(deviceId);
@@ -80,24 +101,22 @@ export function DeviceDetailPage() {
     };
   }, [deviceId]);
 
+  const updateEntry = (i: number, field: keyof ConfigEntry, val: string) =>
+    setConfigEntries((prev) =>
+      prev.map((entry, idx) =>
+        idx === i ? { ...entry, [field]: val } : entry,
+      ),
+    );
+
   const handleSave = async () => {
     if (!device || !deviceId) return;
-
-    let configuration: Record<string, unknown>;
-    try {
-      configuration = JSON.parse(editConfig) as Record<string, unknown>;
-    } catch {
-      setConfigError("Invalid JSON");
-      return;
-    }
-    setConfigError(null);
     setSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
     try {
       const updated = await devicesApi.update(userId, deviceId, {
         status: editStatus,
-        configuration,
+        configuration: fromEntries(configEntries),
         version: device.version,
       });
       setDevice(updated);
@@ -122,7 +141,6 @@ export function DeviceDetailPage() {
 
   return (
     <Box>
-      {/* Header */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
         <IconButton onClick={() => navigate("/")}>
           <ArrowBackIcon />
@@ -143,7 +161,6 @@ export function DeviceDetailPage() {
         </Tooltip>
       </Box>
 
-      {/* Info */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           <Box>
@@ -183,7 +200,6 @@ export function DeviceDetailPage() {
         </Box>
       </Paper>
 
-      {/* Edit form */}
       <Paper sx={{ p: 3 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
           Edit
@@ -201,22 +217,57 @@ export function DeviceDetailPage() {
               <MenuItem value="off">Off</MenuItem>
             </Select>
           </FormControl>
-          <TextField
-            label="Configuration (JSON)"
-            value={editConfig}
-            onChange={(e) => {
-              setEditConfig(e.target.value);
-              setConfigError(null);
-            }}
-            multiline
-            rows={6}
-            fullWidth
-            error={!!configError}
-            helperText={configError}
-            slotProps={{
-              input: { sx: { fontFamily: "monospace", fontSize: 13 } },
-            }}
-          />
+
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Configuration
+            </Typography>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {configEntries.map((entry, i) => (
+                <Box
+                  key={i}
+                  sx={{ display: "flex", gap: 1, alignItems: "center" }}
+                >
+                  <TextField
+                    size="small"
+                    label="Key"
+                    value={entry.key}
+                    onChange={(e) => updateEntry(i, "key", e.target.value)}
+                    sx={{ flex: 1 }}
+                  />
+                  <TextField
+                    size="small"
+                    label="Value"
+                    value={entry.value}
+                    onChange={(e) => updateEntry(i, "value", e.target.value)}
+                    sx={{ flex: 2 }}
+                  />
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() =>
+                      setConfigEntries((prev) =>
+                        prev.filter((_, idx) => idx !== i),
+                      )
+                    }
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              ))}
+              <Button
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={() =>
+                  setConfigEntries((prev) => [...prev, { key: "", value: "" }])
+                }
+                sx={{ alignSelf: "flex-start" }}
+              >
+                Add field
+              </Button>
+            </Box>
+          </Box>
+
           {saveError && <Alert severity="error">{saveError}</Alert>}
           {saveSuccess && <Alert severity="success">Saved successfully</Alert>}
           <Box>
