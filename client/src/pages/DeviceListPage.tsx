@@ -1,0 +1,73 @@
+import { useEffect, useState, useCallback } from "react";
+import { Box, Button, Typography } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import type { Device, CreateDeviceInput } from "@dms/common/types";
+import { devicesApi } from "../api/devices";
+import { useUser } from "../context/UserContext";
+import { DeviceTable } from "../components/DeviceTable";
+import { CreateDeviceDialog } from "../components/CreateDeviceDialog";
+
+export function DeviceListPage() {
+  const { userId } = useUser();
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const fetchDevices = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setDevices(await devicesApi.list(userId));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load devices");
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    void fetchDevices();
+  }, [fetchDevices]);
+
+  const handleCreate = async (data: CreateDeviceInput) => {
+    await devicesApi.create(userId, data);
+    setCreateOpen(false);
+    void fetchDevices();
+  };
+
+  const handleDelete = async (id: string) => {
+    await devicesApi.delete(userId, id);
+    void fetchDevices();
+  };
+
+  return (
+    <Box>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+        <Typography variant="h5">Devices</Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => setCreateOpen(true)}
+        >
+          Add Device
+        </Button>
+      </Box>
+      {error && (
+        <Typography color="error" sx={{ mb: 2 }}>
+          {error}
+        </Typography>
+      )}
+      <DeviceTable
+        devices={devices}
+        loading={loading}
+        onDelete={handleDelete}
+      />
+      <CreateDeviceDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreate={handleCreate}
+      />
+    </Box>
+  );
+}
