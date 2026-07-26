@@ -22,6 +22,13 @@
       "when": 1785090098266,
       "tag": "0002_actual_desired_state",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1785090600000,
+      "tag": "0003_drop_users",
+      "breakpoints": true
     }
   ]
 }

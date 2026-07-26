@@ -8,16 +8,11 @@ export type { Device, CreateDeviceInput, UpdateDeviceInput };
 
 const BASE = "/api/devices";
 
-async function request<T>(
-  path: string,
-  userId: string,
-  init?: RequestInit,
-): Promise<T> {
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(BASE + path, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      "X-User-Id": userId,
       ...init?.headers,
     },
   });
@@ -31,28 +26,23 @@ async function request<T>(
 }
 
 export const devicesApi = {
-  list: (userId: string) => request<Device[]>("", userId),
+  list: () => request<Device[]>(""),
 
-  get: (userId: string, id: string) => request<Device>(`/${id}`, userId),
+  get: (id: string) => request<Device>(`/${id}`),
 
-  create: (userId: string, data: CreateDeviceInput) =>
-    request<Device>("", userId, {
+  create: (data: CreateDeviceInput) =>
+    request<Device>("", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  update: (userId: string, id: string, data: UpdateDeviceInput) =>
-    request<Device>(`/${id}`, userId, {
+  update: (id: string, data: UpdateDeviceInput) =>
+    request<Device>(`/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
 
-  delete: (userId: string, id: string) =>
-    fetch(`${BASE}/${id}`, {
-      method: "DELETE",
-      headers: { "X-User-Id": userId },
-    }),
+  delete: (id: string) => fetch(`${BASE}/${id}`, { method: "DELETE" }),
 
-  // EventSource doesn't support custom headers; header is optional on the server (defaults to Alice).
   events: (id: string) => new EventSource(`${BASE}/${id}/events`),
 };

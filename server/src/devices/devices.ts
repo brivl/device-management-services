@@ -4,7 +4,7 @@ import type {
   UpdateDeviceInput,
 } from "@dms/common/types";
 import type { FastifyInstance } from "fastify";
-import { deviceService } from "../devices/device.service.ts";
+import { deviceService } from "./device.service.ts";
 import { deviceBroadcaster } from "../sse/device-broadcaster.ts";
 
 export async function deviceRoutes(app: FastifyInstance) {
@@ -24,21 +24,19 @@ export async function deviceRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const device = await deviceService.create(request.body, request.userId);
+      const device = await deviceService.create(request.body);
       return reply.status(201).send(device);
     },
   );
 
-  app.get<{ Reply: Device[] }>("/", async (request, reply) => {
-    return reply.send(await deviceService.list(request.userId));
+  app.get<{ Reply: Device[] }>("/", async (_request, reply) => {
+    return reply.send(await deviceService.list());
   });
 
   app.get<{ Params: { deviceId: string }; Reply: Device }>(
     "/:deviceId",
     async (request, reply) => {
-      return reply.send(
-        await deviceService.get(request.params.deviceId, request.userId),
-      );
+      return reply.send(await deviceService.get(request.params.deviceId));
     },
   );
 
@@ -61,11 +59,7 @@ export async function deviceRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       return reply.send(
-        await deviceService.update(
-          request.params.deviceId,
-          request.userId,
-          request.body,
-        ),
+        await deviceService.update(request.params.deviceId, request.body),
       );
     },
   );
@@ -73,7 +67,7 @@ export async function deviceRoutes(app: FastifyInstance) {
   app.delete<{ Params: { deviceId: string } }>(
     "/:deviceId",
     async (request, reply) => {
-      await deviceService.delete(request.params.deviceId, request.userId);
+      await deviceService.delete(request.params.deviceId);
       return reply.status(204).send();
     },
   );

@@ -9,8 +9,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "paths": {
-      "@dms/common/types": ["../common/src/types.ts"],
-      "@dms/common/users": ["../common/src/users.ts"]
+      "@dms/common/types": ["../common/src/types.ts"]
     }
   },
   "include": ["src", "tests"]
