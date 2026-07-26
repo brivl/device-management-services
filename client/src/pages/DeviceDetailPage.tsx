@@ -12,46 +12,32 @@ import {
   MenuItem,
   Paper,
   Select,
-  TextField,
+  Slider,
   Tooltip,
   Typography,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
 import WifiIcon from "@mui/icons-material/Wifi";
 import WifiOffIcon from "@mui/icons-material/WifiOff";
 import type { Device, DeviceStatus } from "@dms/common/types";
 import { devicesApi } from "../api/devices";
 import { useUser } from "../context/UserContext";
 
-type ConfigEntry = { key: string; value: string };
-
-function coerce(value: string): unknown {
-  if (value === "true") return true;
-  if (value === "false") return false;
-  const n = Number(value);
-  if (value.trim() !== "" && !isNaN(n)) return n;
-  return value;
-}
-
-function toEntries(config: Record<string, unknown>): ConfigEntry[] {
-  return Object.entries(config).map(([key, value]) => ({
-    key,
-    value: String(value),
-  }));
-}
-
-function fromEntries(entries: ConfigEntry[]): Record<string, unknown> {
-  return Object.fromEntries(
-    entries
-      .filter((e) => e.key.trim())
-      .map(({ key, value }) => [key, coerce(value)]),
-  );
-}
+const MODES = ["auto", "manual", "scheduled"] as const;
+type Mode = (typeof MODES)[number];
 
 const statusColor = (s: DeviceStatus): "success" | "warning" | "default" =>
   s === "enabled" ? "success" : s === "sleep" ? "warning" : "default";
+
+function readBrightness(config: Record<string, unknown>): number {
+  const v = config.brightness;
+  return typeof v === "number" ? v : 100;
+}
+
+function readMode(config: Record<string, unknown>): Mode {
+  const v = config.mode;
+  return MODES.includes(v as Mode) ? (v as Mode) : "auto";
+}
 
 export function DeviceDetailPage() {
   const { deviceId } = useParams<{ deviceId: string }>();
@@ -64,7 +50,8 @@ export function DeviceDetailPage() {
   const [sseConnected, setSseConnected] = useState(false);
 
   const [editStatus, setEditStatus] = useState<DeviceStatus>("enabled");
-  const [configEntries, setConfigEntries] = useState<ConfigEntry[]>([]);
+  const [brightness, setBrightness] = useState(100);
+  const [mode, setMode] = useState<Mode>("auto");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -78,7 +65,8 @@ export function DeviceDetailPage() {
       .then((d) => {
         setDevice(d);
         setEditStatus(d.status);
-        setConfigEntries(toEntries(d.configuration));
+        setBrightness(readBrightness(d.configuration));
+        setMode(readMode(d.configuration));
       })
       .catch((e: unknown) =>
         setFetchError(e instanceof Error ? e.message : "Failed to load device"),
@@ -101,13 +89,6 @@ export function DeviceDetailPage() {
     };
   }, [deviceId]);
 
-  const updateEntry = (i: number, field: keyof ConfigEntry, val: string) =>
-    setConfigEntries((prev) =>
-      prev.map((entry, idx) =>
-        idx === i ? { ...entry, [field]: val } : entry,
-      ),
-    );
-
   const handleSave = async () => {
     if (!device || !deviceId) return;
     setSaving(true);
@@ -116,7 +97,7 @@ export function DeviceDetailPage() {
     try {
       const updated = await devicesApi.update(userId, deviceId, {
         status: editStatus,
-        configuration: fromEntries(configEntries),
+        configuration: { brightness, mode },
         version: device.version,
       });
       setDevice(updated);
@@ -183,10 +164,18 @@ export function DeviceDetailPage() {
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
-              Created
+              Brightness
             </Typography>
-            <Typography variant="body2">
-              {new Date(device.createdAt).toLocaleString()}
+            <Typography fontWeight={500}>
+              {readBrightness(device.configuration)}%
+            </Typography>
+          </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              Mode
+            </Typography>
+            <Typography fontWeight={500}>
+              {readMode(device.configuration)}
             </Typography>
           </Box>
           <Box>
@@ -217,57 +206,30 @@ export function DeviceDetailPage() {
               <MenuItem value="off">Off</MenuItem>
             </Select>
           </FormControl>
-
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Configuration
-            </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              {configEntries.map((entry, i) => (
-                <Box
-                  key={i}
-                  sx={{ display: "flex", gap: 1, alignItems: "center" }}
-                >
-                  <TextField
-                    size="small"
-                    label="Key"
-                    value={entry.key}
-                    onChange={(e) => updateEntry(i, "key", e.target.value)}
-                    sx={{ flex: 1 }}
-                  />
-                  <TextField
-                    size="small"
-                    label="Value"
-                    value={entry.value}
-                    onChange={(e) => updateEntry(i, "value", e.target.value)}
-                    sx={{ flex: 2 }}
-                  />
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() =>
-                      setConfigEntries((prev) =>
-                        prev.filter((_, idx) => idx !== i),
-                      )
-                    }
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              ))}
-              <Button
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={() =>
-                  setConfigEntries((prev) => [...prev, { key: "", value: "" }])
-                }
-                sx={{ alignSelf: "flex-start" }}
-              >
-                Add field
-              </Button>
-            </Box>
+            <Typography gutterBottom>Brightness: {brightness}%</Typography>
+            <Slider
+              value={brightness}
+              onChange={(_, v) => setBrightness(v as number)}
+              min={0}
+              max={100}
+              valueLabelDisplay="auto"
+            />
           </Box>
-
+          <FormControl fullWidth>
+            <InputLabel>Mode</InputLabel>
+            <Select
+              value={mode}
+              label="Mode"
+              onChange={(e) => setMode(e.target.value as Mode)}
+            >
+              {MODES.map((m) => (
+                <MenuItem key={m} value={m}>
+                  {m.charAt(0).toUpperCase() + m.slice(1)}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           {saveError && <Alert severity="error">{saveError}</Alert>}
           {saveSuccess && <Alert severity="success">Saved successfully</Alert>}
           <Box>
