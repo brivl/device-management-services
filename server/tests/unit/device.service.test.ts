@@ -42,7 +42,6 @@ const DEVICE = {
   name: "Test Light",
   status: "enabled" as const,
   configuration: { brightness: 100 } as Record<string, unknown>,
-  desired: null as null,
   version: 2,
   createdAt: "2024-01-01T00:00:00.000Z",
   updatedAt: "2024-01-01T00:00:00.000Z",
@@ -116,7 +115,7 @@ describe("deviceService.update", () => {
     ).rejects.toThrow(ConflictError);
   });
 
-  it("sets desired state — does not update actual directly", async () => {
+  it("writes desired to repo without touching actual", async () => {
     repo.findById.mockReturnValue(DEVICE_ROW);
     const updatedRow = {
       ...DEVICE_ROW,
@@ -155,7 +154,7 @@ describe("deviceService.update", () => {
     );
   });
 
-  it("broadcasts SSE event on success", async () => {
+  it("does not broadcast immediately — scheduleSync broadcasts after sync", async () => {
     repo.findById.mockReturnValue(DEVICE_ROW);
     const updatedRow = {
       ...DEVICE_ROW,
@@ -164,10 +163,7 @@ describe("deviceService.update", () => {
     };
     repo.update.mockReturnValue(updatedRow);
     await deviceService.update("device-1", { status: "off" });
-    expect(broadcaster.broadcast).toHaveBeenCalledWith(
-      "device-1",
-      expect.objectContaining({ version: 3, desired: { status: "off" } }),
-    );
+    expect(broadcaster.broadcast).not.toHaveBeenCalled();
   });
 });
 

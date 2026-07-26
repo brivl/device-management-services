@@ -78,8 +78,9 @@ export async function deviceRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { deviceId } = request.params;
       reply.sse.keepAlive();
+      reply.sse.sendHeaders(); // commit SSE headers so EventSource.onopen fires
       const sender = (data: unknown) =>
-        reply.sse.send({ event: "device-updated", data });
+        void reply.sse.send({ event: "device-updated", data });
       deviceBroadcaster.subscribe(deviceId, sender);
       reply.sse.onClose(() => deviceBroadcaster.unsubscribe(deviceId, sender));
     },

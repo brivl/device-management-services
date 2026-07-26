@@ -68,7 +68,6 @@ export const deviceService = {
       createdAt: now,
     });
 
-    deviceBroadcaster.broadcast(deviceId, device);
     void scheduleSync(deviceId, device.version);
     return device;
   },
@@ -85,7 +84,6 @@ function toDevice(row: DeviceRow): Device {
     name: row.name,
     status: row.actual.status,
     configuration: row.actual.configuration,
-    desired: row.desired ?? null,
     version: row.version,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -112,7 +110,6 @@ async function scheduleSync(
   const synced = deviceRepository.update(deviceId, pendingVersion, {
     actual,
     desired: null,
-    version: pendingVersion + 1,
     updatedAt: now,
   });
   if (!synced) return;

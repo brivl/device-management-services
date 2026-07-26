@@ -57,7 +57,7 @@ describe("POST /devices", () => {
 });
 
 describe("PATCH /devices/:deviceId", () => {
-  it("sets desired state and increments version", async () => {
+  it("accepts command and increments version; actual status unchanged until sync", async () => {
     const { id, version } = (
       await app.inject({
         method: "POST",
@@ -74,8 +74,7 @@ describe("PATCH /devices/:deviceId", () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.version).toBe(version + 1);
-    expect(body.desired.status).toBe("off");
-    expect(body.status).toBe("enabled");
+    expect(body.status).toBe("enabled"); // actual unchanged until device acknowledges
   });
 });
 

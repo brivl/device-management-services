@@ -53,8 +53,7 @@ describe("full device lifecycle", () => {
     expect(patchRes.statusCode).toBe(200);
     const updated = patchRes.json();
     expect(updated.version).toBe(1);
-    expect(updated.desired.status).toBe("off");
-    expect(updated.status).toBe("enabled");
+    expect(updated.status).toBe("enabled"); // actual unchanged until device acknowledges
 
     const history = testDb
       .select()
