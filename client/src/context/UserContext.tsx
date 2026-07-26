@@ -1,8 +1,6 @@
-import { createContext, useContext, useState } from "react";
-import type { ReactNode } from "react";
 import { SEEDED_USERS } from "@dms/common/users";
-
-export { SEEDED_USERS };
+import type { ReactNode } from "react";
+import { createContext, useContext, useState } from "react";
 
 type UserContextValue = {
   userId: string;
@@ -13,7 +11,7 @@ type UserContextValue = {
 const UserContext = createContext<UserContextValue | null>(null);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [userId, setUserId] = useState(SEEDED_USERS[0].id);
+  const [userId, setUserId] = useState<string>(SEEDED_USERS[0].id);
   const userName = SEEDED_USERS.find((u) => u.id === userId)?.name ?? "Unknown";
 
   return (
