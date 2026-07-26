@@ -1,4 +1,4 @@
-import { useState } from "react";
+import type { CreateDeviceInput, DeviceStatus } from "@dms/common/types";
 import {
   Box,
   Button,
@@ -14,7 +14,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import type { CreateDeviceInput, DeviceStatus } from "@dms/common/types";
+import { useState } from "react";
 
 type Props = {
   open: boolean;
@@ -25,26 +25,38 @@ type Props = {
 const MODES = ["auto", "manual", "scheduled"] as const;
 type Mode = (typeof MODES)[number];
 
+type FormState = {
+  name: string;
+  status: DeviceStatus;
+  brightness: number;
+  mode: Mode;
+};
+const DEFAULT_FORM: FormState = {
+  name: "",
+  status: "enabled",
+  brightness: 100,
+  mode: "auto",
+};
+
 export function CreateDeviceDialog({ open, onClose, onCreate }: Props) {
-  const [name, setName] = useState("");
-  const [status, setStatus] = useState<DeviceStatus>("enabled");
-  const [brightness, setBrightness] = useState(100);
-  const [mode, setMode] = useState<Mode>("auto");
+  const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [submitting, setSubmitting] = useState(false);
 
+  const set =
+    <K extends keyof FormState>(key: K) =>
+    (value: FormState[K]) =>
+      setForm((f) => ({ ...f, [key]: value }));
+
   const handleSubmit = async () => {
-    if (!name.trim()) return;
+    if (!form.name.trim()) return;
     setSubmitting(true);
     try {
       await onCreate({
-        name: name.trim(),
-        status,
-        configuration: { brightness, mode },
+        name: form.name.trim(),
+        status: form.status,
+        configuration: { brightness: form.brightness, mode: form.mode },
       });
-      setName("");
-      setStatus("enabled");
-      setBrightness(100);
-      setMode("auto");
+      setForm(DEFAULT_FORM);
     } finally {
       setSubmitting(false);
     }
@@ -63,17 +75,17 @@ export function CreateDeviceDialog({ open, onClose, onCreate }: Props) {
       >
         <TextField
           label="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          value={form.name}
+          onChange={(e) => set("name")(e.target.value)}
           fullWidth
           autoFocus
         />
         <FormControl fullWidth>
           <InputLabel>Status</InputLabel>
           <Select
-            value={status}
+            value={form.status}
             label="Status"
-            onChange={(e) => setStatus(e.target.value as DeviceStatus)}
+            onChange={(e) => set("status")(e.target.value)}
           >
             <MenuItem value="enabled">Enabled</MenuItem>
             <MenuItem value="sleep">Sleep</MenuItem>
@@ -81,10 +93,10 @@ export function CreateDeviceDialog({ open, onClose, onCreate }: Props) {
           </Select>
         </FormControl>
         <Box>
-          <Typography gutterBottom>Brightness: {brightness}%</Typography>
+          <Typography gutterBottom>Brightness: {form.brightness}%</Typography>
           <Slider
-            value={brightness}
-            onChange={(_, v) => setBrightness(v as number)}
+            value={form.brightness}
+            onChange={(_, v) => set("brightness")(v)}
             min={0}
             max={100}
             valueLabelDisplay="auto"
@@ -93,9 +105,9 @@ export function CreateDeviceDialog({ open, onClose, onCreate }: Props) {
         <FormControl fullWidth>
           <InputLabel>Mode</InputLabel>
           <Select
-            value={mode}
+            value={form.mode}
             label="Mode"
-            onChange={(e) => setMode(e.target.value as Mode)}
+            onChange={(e) => set("mode")(e.target.value)}
           >
             {MODES.map((m) => (
               <MenuItem key={m} value={m}>
@@ -108,9 +120,9 @@ export function CreateDeviceDialog({ open, onClose, onCreate }: Props) {
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button
-          onClick={() => void handleSubmit()}
+          onClick={handleSubmit}
           variant="contained"
-          disabled={!name.trim() || submitting}
+          disabled={!form.name.trim() || submitting}
         >
           Create
         </Button>

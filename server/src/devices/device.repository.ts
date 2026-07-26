@@ -1,6 +1,6 @@
-import { eq, and, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../db/index.ts";
-import { devices, deviceHistory } from "../db/schema.ts";
+import { deviceHistory, devices } from "../db/schema.ts";
 
 export type DeviceRow = typeof devices.$inferSelect;
 export type DeviceInsert = typeof devices.$inferInsert;
@@ -11,24 +11,22 @@ export const deviceRepository = {
   },
 
   findById(deviceId: string): DeviceRow | undefined {
-    return db.select().from(devices).where(eq(devices.id, deviceId)).get();
+    return db
+      .select()
+      .from(devices)
+      .where(and(eq(devices.id, deviceId), isNull(devices.deletedAt)))
+      .get();
   },
 
   create(device: DeviceInsert): DeviceRow {
     return db.insert(devices).values(device).returning().get();
   },
 
-  update(
-    deviceId: string,
-    expectedVersion: number,
-    data: Partial<DeviceInsert>,
-  ): DeviceRow | undefined {
+  update(deviceId: string, data: Partial<DeviceInsert>): DeviceRow | undefined {
     return db
       .update(devices)
       .set(data)
-      .where(
-        and(eq(devices.id, deviceId), eq(devices.version, expectedVersion)),
-      )
+      .where(eq(devices.id, deviceId))
       .returning()
       .get();
   },

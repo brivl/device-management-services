@@ -24,6 +24,8 @@ import { devicesApi } from "../../api/devices";
 const MODES = ["auto", "manual", "scheduled"] as const;
 type Mode = (typeof MODES)[number];
 
+type FormState = { status: DeviceStatus; brightness: number; mode: Mode };
+
 function readBrightness(config: Record<string, unknown>): number {
   const v = config.brightness;
   return typeof v === "number" ? v : 100;
@@ -32,6 +34,14 @@ function readBrightness(config: Record<string, unknown>): number {
 function readMode(config: Record<string, unknown>): Mode {
   const v = config.mode;
   return MODES.includes(v as Mode) ? (v as Mode) : "auto";
+}
+
+function formFromDevice(d: Device): FormState {
+  return {
+    status: d.status,
+    brightness: readBrightness(d.configuration),
+    mode: readMode(d.configuration),
+  };
 }
 
 export function DeviceDetailPage() {
@@ -43,9 +53,16 @@ export function DeviceDetailPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [sseConnected, setSseConnected] = useState(false);
 
-  const [editStatus, setEditStatus] = useState<DeviceStatus>("enabled");
-  const [brightness, setBrightness] = useState(100);
-  const [mode, setMode] = useState<Mode>("auto");
+  const [form, setForm] = useState<FormState>({
+    status: "enabled",
+    brightness: 100,
+    mode: "auto",
+  });
+  const setField =
+    <K extends keyof FormState>(key: K) =>
+    (value: FormState[K]) =>
+      setForm((f) => ({ ...f, [key]: value }));
+
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -57,9 +74,7 @@ export function DeviceDetailPage() {
       .get(deviceId)
       .then((d) => {
         setDevice(d);
-        setEditStatus(d.status);
-        setBrightness(readBrightness(d.configuration));
-        setMode(readMode(d.configuration));
+        setForm(formFromDevice(d));
       })
       .catch((e: unknown) =>
         setFetchError(e instanceof Error ? e.message : "Failed to load device"),
@@ -75,9 +90,7 @@ export function DeviceDetailPage() {
     es.addEventListener("device-updated", (e) => {
       const updated = JSON.parse((e as MessageEvent<string>).data) as Device;
       setDevice(updated);
-      setEditStatus(updated.status);
-      setBrightness(readBrightness(updated.configuration));
-      setMode(readMode(updated.configuration));
+      setForm(formFromDevice(updated));
     });
     return () => {
       es.close();
@@ -91,8 +104,8 @@ export function DeviceDetailPage() {
     setSaveError(null);
     try {
       await devicesApi.update(deviceId, {
-        status: editStatus,
-        configuration: { brightness, mode },
+        status: form.status,
+        configuration: { brightness: form.brightness, mode: form.mode },
       });
     } catch (e: unknown) {
       setSaveError(e instanceof Error ? e.message : "Failed to save");
@@ -156,9 +169,11 @@ export function DeviceDetailPage() {
           <FormControl fullWidth>
             <InputLabel>Status</InputLabel>
             <Select
-              value={editStatus}
+              value={form.status}
               label="Status"
-              onChange={(e) => setEditStatus(e.target.value as DeviceStatus)}
+              onChange={(e) =>
+                setField("status")(e.target.value as DeviceStatus)
+              }
             >
               <MenuItem value="enabled">Enabled</MenuItem>
               <MenuItem value="sleep">Sleep</MenuItem>
@@ -166,10 +181,10 @@ export function DeviceDetailPage() {
             </Select>
           </FormControl>
           <Box>
-            <Typography gutterBottom>Brightness: {brightness}%</Typography>
+            <Typography gutterBottom>Brightness: {form.brightness}%</Typography>
             <Slider
-              value={brightness}
-              onChange={(_, v) => setBrightness(v as number)}
+              value={form.brightness}
+              onChange={(_, v) => setField("brightness")(v as number)}
               min={0}
               max={100}
               valueLabelDisplay="auto"
@@ -178,9 +193,9 @@ export function DeviceDetailPage() {
           <FormControl fullWidth>
             <InputLabel>Mode</InputLabel>
             <Select
-              value={mode}
+              value={form.mode}
               label="Mode"
-              onChange={(e) => setMode(e.target.value as Mode)}
+              onChange={(e) => setField("mode")(e.target.value as Mode)}
             >
               {MODES.map((m) => (
                 <MenuItem key={m} value={m}>

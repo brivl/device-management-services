@@ -18,7 +18,7 @@ vi.mock("../../src/sse/device-broadcaster.ts", () => ({
 import { deviceRepository } from "../../src/devices/device.repository.ts";
 import { deviceBroadcaster } from "../../src/sse/device-broadcaster.ts";
 import { deviceService } from "../../src/devices/device.service.ts";
-import { NotFoundError, ConflictError } from "../../src/errors.ts";
+import { NotFoundError } from "../../src/errors.ts";
 
 const repo = vi.mocked(deviceRepository);
 const broadcaster = vi.mocked(deviceBroadcaster);
@@ -107,12 +107,14 @@ describe("deviceService.create", () => {
 });
 
 describe("deviceService.update", () => {
-  it("throws ConflictError on version mismatch", async () => {
-    repo.findById.mockReturnValue(DEVICE_ROW);
-    repo.update.mockReturnValue(undefined);
+  it("throws NotFoundError when device is soft-deleted", async () => {
+    repo.findById.mockReturnValue({
+      ...DEVICE_ROW,
+      deletedAt: "2024-01-02T00:00:00.000Z",
+    });
     await expect(
       deviceService.update("device-1", { status: "off" }),
-    ).rejects.toThrow(ConflictError);
+    ).rejects.toThrow(NotFoundError);
   });
 
   it("writes desired to repo without touching actual", async () => {
@@ -126,11 +128,9 @@ describe("deviceService.update", () => {
     await deviceService.update("device-1", { status: "off" });
     expect(repo.update).toHaveBeenCalledWith(
       "device-1",
-      2,
       expect.objectContaining({ desired: { status: "off" }, version: 3 }),
     );
     expect(repo.update).not.toHaveBeenCalledWith(
-      expect.anything(),
       expect.anything(),
       expect.objectContaining({ actual: expect.anything() }),
     );

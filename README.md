@@ -31,80 +31,30 @@ Objectives:
 
 ---
 
-## Architecture & Key Design Decisions
+## Approach & Challenges
 
-Following REST API best practices. Backend is split in vertical layers: routes (controllers) -> services -> repositories for clean separation of concerns and ease of testing when we need to mock different layers.
+The backend is split into vertical slices (routes → service → repository), keeping each layer independently testable. Devices support full CRUD with soft deletes, server-managed versioning, and a history table that snapshots every command for audit.
 
-**Desired / actual state (IoT shadow pattern)** — `PATCH` writes the requested change to a `desired` JSON column and returns immediately. A simulated device acknowledgement fires ~1.5 s later: the server reads `desired`, merges it into `actual`, clears `desired`, and broadcasts the updated device via SSE. This mirrors how AWS IoT Device Shadow works — the cloud accepts commands instantly, and the physical device applies them asynchronously. The frontend displays the device's confirmed `actual` state and receives the live update over SSE with no polling needed.
+Real-time updates are delivered over SSE — the server keeps an in-memory subscriber map per device and pushes events when state changes.
 
-Version is managed server-side and incremented on every write (both on PATCH and on sync). Clients never supply a version; the field is exposed in the API for audit and history purposes only.
+The main design challenge was the update flow. Optimistic locking was the obvious first choice, but IoT devices don't fit that model — state can change from either side (API or directly from device), so treating both as competing writes creates unnecessary conflicts. The solution is the **desired / actual state pattern** (the same model AWS IoT Device Shadow uses): `PATCH` stores the command in a `desired` column and returns immediately without waiting for the hardware. A simulated acknowledgement fires ~1.5 s later, applies `desired` into `actual`, and broadcasts the confirmed state over SSE. The client only ever sees confirmed state.
 
-**Device History** — Every successful `PATCH` writes a full JSON snapshot of the device state to `DeviceHistory`. Reading history is out of scope (no GET endpoint), but the audit trail is persisted for future use.
+Claude Code was used mainly for boilerplate writing and research purposes; all decisions were made by myself.
 
-**Real-time updates (SSE)** — The server holds an in-memory `Map<deviceId, Set<Response>>`. On successful `PATCH` and again after the sync completes, all subscribers of that device receive a `device-updated` event.
-
-**Soft deletes** — Devices are never hard-deleted. `DELETE /devices/:deviceId` sets `deleted_at`; all list and detail endpoints filter `WHERE deleted_at IS NULL`.
+TDD approach was used for each feature.
 
 ---
 
 ## API Endpoints
 
-| Method | Path                        | Description                              |
-| ------ | --------------------------- | ---------------------------------------- |
-| POST   | `/devices`                  | Register a new device                    |
-| GET    | `/devices`                  | List all devices                         |
-| GET    | `/devices/:deviceId`        | Get a specific device by ID              |
-| PATCH  | `/devices/:deviceId`        | Send a command to the device             |
-| DELETE | `/devices/:deviceId`        | Soft-delete a device                     |
-| GET    | `/devices/:deviceId/events` | SSE stream for real-time device updates  |
-
-### Request / Response shapes
-
-**POST /devices**
-
-```json
-// Request
-{ "name": "Living Room Light", "status": "enabled", "configuration": { "brightness": 80 } }
-
-// Response 201
-{
-  "id": "uuid",
-  "name": "Living Room Light",
-  "status": "enabled",
-  "configuration": { "brightness": 80 },
-  "desired": null,
-  "version": 0,
-  "createdAt": "..."
-}
-```
-
-**PATCH /devices/:deviceId**
-
-```json
-// Request — desired fields only, no version required
-{ "status": "off" }
-
-// Response 200 — desired is set, actual (status) is still the confirmed state
-{
-  "id": "uuid",
-  "name": "Living Room Light",
-  "status": "enabled",
-  "configuration": { "brightness": 80 },
-  "desired": { "status": "off" },
-  "version": 1,
-  "updatedAt": "..."
-}
-
-// ~1.5 s later, SSE broadcasts the synced state
-{
-  "id": "uuid",
-  "status": "off",
-  "configuration": { "brightness": 80 },
-  "desired": null,
-  "version": 2,
-  "updatedAt": "..."
-}
-```
+| Method | Path                        | Description                             |
+| ------ | --------------------------- | --------------------------------------- |
+| POST   | `/devices`                  | Register a new device                   |
+| GET    | `/devices`                  | List all devices                        |
+| GET    | `/devices/:deviceId`        | Get a specific device by ID             |
+| PATCH  | `/devices/:deviceId`        | Send a command to the device            |
+| DELETE | `/devices/:deviceId`        | Soft-delete a device                    |
+| GET    | `/devices/:deviceId/events` | SSE stream for real-time device updates |
 
 ---
 
@@ -130,7 +80,7 @@ DeviceHistory
 
 **Out of scope**
 
-- Authentication / user management — in a production system each request would carry a token validated server-side, and devices would be associated to their owner via a `user_devices` junction table. The API surface would be unchanged; the service layer would add ownership checks using the resolved user identity.
+- Authentication / user management — in a production system each request would carry a token validated server-side, and devices would be associated to users via a `user_devices` junction table. The API surface would be unchanged; the service layer would add ownership checks using the resolved user identity.
 - Reading device history — the audit trail is written on every PATCH but there is no GET endpoint for it.
 
 https://excalidraw.com/#json=JFFAJK8Els1IJbE7S6QUM,rspQOdGrLDpatiNqkCR_Ng

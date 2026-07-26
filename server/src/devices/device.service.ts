@@ -6,7 +6,7 @@ import type {
   UpdateDeviceInput,
 } from "@dms/common/types";
 import { v4 as uuidv4 } from "uuid";
-import { ConflictError, NotFoundError } from "../errors.ts";
+import { NotFoundError } from "../errors.ts";
 import { deviceBroadcaster } from "../sse/device-broadcaster.ts";
 import { deviceRepository, type DeviceRow } from "./device.repository.ts";
 
@@ -53,14 +53,13 @@ export const deviceService = {
       desired.configuration = data.configuration;
 
     const now = new Date().toISOString();
-    const updated = deviceRepository.update(deviceId, current.version, {
+    const updated = deviceRepository.update(deviceId, {
       desired,
       version: current.version + 1,
       updatedAt: now,
     });
-    if (!updated) throw new ConflictError("Version mismatch");
 
-    const device = toDevice(updated);
+    const device = toDevice(updated!);
     deviceRepository.createHistory({
       deviceId,
       version: device.version,
@@ -107,7 +106,7 @@ async function scheduleSync(
     configuration: desired.configuration ?? row.actual.configuration,
   };
   const now = new Date().toISOString();
-  const synced = deviceRepository.update(deviceId, pendingVersion, {
+  const synced = deviceRepository.update(deviceId, {
     actual,
     desired: null,
     updatedAt: now,
