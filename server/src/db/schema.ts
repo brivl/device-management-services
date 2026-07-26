@@ -1,4 +1,5 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import type { DesiredState } from "@dms/common/types";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
@@ -13,6 +14,7 @@ export const devices = sqliteTable("devices", {
   configuration: text("configuration", { mode: "json" })
     .notNull()
     .$type<Record<string, unknown>>(),
+  desired: text("desired", { mode: "json" }).$type<DesiredState | null>(),
   version: integer("version").notNull().default(0),
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),

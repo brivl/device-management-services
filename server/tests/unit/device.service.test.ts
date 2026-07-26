@@ -25,22 +25,36 @@ import { NotFoundError, ConflictError } from "../../src/errors.ts";
 const repo = vi.mocked(deviceRepository);
 const broadcaster = vi.mocked(deviceBroadcaster);
 
+// Repository row shape (includes deletedAt)
+const DEVICE_ROW = {
+  id: "device-1",
+  name: "Test Light",
+  status: "enabled" as const,
+  configuration: { brightness: 100 } as Record<string, unknown>,
+  desired: null as null,
+  version: 2,
+  createdAt: "2024-01-01T00:00:00.000Z",
+  updatedAt: "2024-01-01T00:00:00.000Z",
+  deletedAt: null as null,
+};
+
+// Service output shape (deletedAt stripped by toDevice)
 const DEVICE = {
   id: "device-1",
   name: "Test Light",
   status: "enabled" as const,
-  configuration: { brightness: 100 },
+  configuration: { brightness: 100 } as Record<string, unknown>,
+  desired: null as null,
   version: 2,
   createdAt: "2024-01-01T00:00:00.000Z",
   updatedAt: "2024-01-01T00:00:00.000Z",
-  deletedAt: null,
 };
 
 beforeEach(() => vi.clearAllMocks());
 
 describe("deviceService.list", () => {
-  it("returns devices for user", async () => {
-    repo.findAllByUserId.mockReturnValue([DEVICE]);
+  it("returns mapped devices for user", async () => {
+    repo.findAllByUserId.mockReturnValue([DEVICE_ROW]);
     const result = await deviceService.list("user-1");
     expect(result).toEqual([DEVICE]);
     expect(repo.findAllByUserId).toHaveBeenCalledWith("user-1");
@@ -49,7 +63,7 @@ describe("deviceService.list", () => {
 
 describe("deviceService.get", () => {
   it("returns device when found and owned", async () => {
-    repo.findById.mockReturnValue(DEVICE);
+    repo.findById.mockReturnValue(DEVICE_ROW);
     repo.isOwnedByUser.mockReturnValue(true);
     await expect(deviceService.get("device-1", "user-1")).resolves.toEqual(
       DEVICE,
@@ -65,7 +79,7 @@ describe("deviceService.get", () => {
 
   it("throws NotFoundError when device is soft-deleted", async () => {
     repo.findById.mockReturnValue({
-      ...DEVICE,
+      ...DEVICE_ROW,
       deletedAt: "2024-01-02T00:00:00.000Z",
     });
     await expect(deviceService.get("device-1", "user-1")).rejects.toThrow(
@@ -74,7 +88,7 @@ describe("deviceService.get", () => {
   });
 
   it("throws NotFoundError when device not owned by user", async () => {
-    repo.findById.mockReturnValue(DEVICE);
+    repo.findById.mockReturnValue(DEVICE_ROW);
     repo.isOwnedByUser.mockReturnValue(false);
     await expect(deviceService.get("device-1", "user-1")).rejects.toThrow(
       NotFoundError,
@@ -84,7 +98,7 @@ describe("deviceService.get", () => {
 
 describe("deviceService.create", () => {
   it("uses defaultConfiguration when none provided", async () => {
-    repo.create.mockReturnValue(DEVICE);
+    repo.create.mockReturnValue(DEVICE_ROW);
     await deviceService.create({ name: "Light", status: "enabled" }, "user-1");
     expect(repo.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -94,7 +108,7 @@ describe("deviceService.create", () => {
   });
 
   it("uses provided configuration when given", async () => {
-    repo.create.mockReturnValue(DEVICE);
+    repo.create.mockReturnValue(DEVICE_ROW);
     await deviceService.create(
       { name: "Light", status: "enabled", configuration: { brightness: 50 } },
       "user-1",
@@ -105,20 +119,23 @@ describe("deviceService.create", () => {
   });
 
   it("creates User_Device link for all seeded users", async () => {
-    repo.create.mockReturnValue(DEVICE);
+    repo.create.mockReturnValue(DEVICE_ROW);
     await deviceService.create({ name: "Light", status: "enabled" }, "user-1");
     // Simulation mode: device is shared with all seeded users so any user can demo SSE
     const { SEEDED_USERS } = await import("@dms/common/users");
     expect(repo.createUserDevice).toHaveBeenCalledTimes(SEEDED_USERS.length);
     for (const user of SEEDED_USERS) {
-      expect(repo.createUserDevice).toHaveBeenCalledWith(user.id, DEVICE.id);
+      expect(repo.createUserDevice).toHaveBeenCalledWith(
+        user.id,
+        DEVICE_ROW.id,
+      );
     }
   });
 });
 
 describe("deviceService.update", () => {
   it("throws ConflictError on version mismatch", async () => {
-    repo.findById.mockReturnValue(DEVICE);
+    repo.findById.mockReturnValue(DEVICE_ROW);
     repo.isOwnedByUser.mockReturnValue(true);
     repo.update.mockReturnValue(undefined); // simulates DB version mismatch
     await expect(
@@ -126,11 +143,15 @@ describe("deviceService.update", () => {
     ).rejects.toThrow(ConflictError);
   });
 
-  it("increments version on successful update", async () => {
-    repo.findById.mockReturnValue(DEVICE);
+  it("sets desired state instead of applying directly", async () => {
+    repo.findById.mockReturnValue(DEVICE_ROW);
     repo.isOwnedByUser.mockReturnValue(true);
-    const updated = { ...DEVICE, version: 3, status: "off" as const };
-    repo.update.mockReturnValue(updated);
+    const updatedRow = {
+      ...DEVICE_ROW,
+      version: 3,
+      desired: { status: "off" as const },
+    };
+    repo.update.mockReturnValue(updatedRow);
     await deviceService.update("device-1", "user-1", {
       version: 2,
       status: "off",
@@ -138,15 +159,25 @@ describe("deviceService.update", () => {
     expect(repo.update).toHaveBeenCalledWith(
       "device-1",
       2,
-      expect.objectContaining({ version: 3 }),
+      expect.objectContaining({ desired: { status: "off" }, version: 3 }),
+    );
+    // Actual status is NOT written — only desired
+    expect(repo.update).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ status: "off" }),
     );
   });
 
   it("writes DeviceHistory snapshot on success", async () => {
-    repo.findById.mockReturnValue(DEVICE);
+    repo.findById.mockReturnValue(DEVICE_ROW);
     repo.isOwnedByUser.mockReturnValue(true);
-    const updated = { ...DEVICE, version: 3 };
-    repo.update.mockReturnValue(updated);
+    const updatedRow = {
+      ...DEVICE_ROW,
+      version: 3,
+      desired: { status: "off" as const },
+    };
+    repo.update.mockReturnValue(updatedRow);
     await deviceService.update("device-1", "user-1", {
       version: 2,
       status: "off",
@@ -155,30 +186,37 @@ describe("deviceService.update", () => {
       expect.objectContaining({
         deviceId: "device-1",
         version: 3,
-        snapshot: updated,
+        snapshot: expect.objectContaining({ id: "device-1", version: 3 }),
       }),
     );
   });
 
   it("broadcasts SSE event on success", async () => {
-    repo.findById.mockReturnValue(DEVICE);
+    repo.findById.mockReturnValue(DEVICE_ROW);
     repo.isOwnedByUser.mockReturnValue(true);
-    const updated = { ...DEVICE, version: 3 };
-    repo.update.mockReturnValue(updated);
+    const updatedRow = {
+      ...DEVICE_ROW,
+      version: 3,
+      desired: { status: "off" as const },
+    };
+    repo.update.mockReturnValue(updatedRow);
     await deviceService.update("device-1", "user-1", {
       version: 2,
       status: "off",
     });
-    expect(broadcaster.broadcast).toHaveBeenCalledWith("device-1", updated);
+    expect(broadcaster.broadcast).toHaveBeenCalledWith(
+      "device-1",
+      expect.objectContaining({ version: 3, desired: { status: "off" } }),
+    );
   });
 });
 
 describe("deviceService.delete", () => {
   it("soft-deletes by setting deletedAt", async () => {
-    repo.findById.mockReturnValue(DEVICE);
+    repo.findById.mockReturnValue(DEVICE_ROW);
     repo.isOwnedByUser.mockReturnValue(true);
     repo.delete.mockReturnValue({
-      ...DEVICE,
+      ...DEVICE_ROW,
       deletedAt: "2024-01-02T00:00:00.000Z",
     });
     await deviceService.delete("device-1", "user-1");

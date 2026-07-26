@@ -54,7 +54,6 @@ export function DeviceDetailPage() {
   const [mode, setMode] = useState<Mode>("auto");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     if (!deviceId) return;
@@ -93,7 +92,6 @@ export function DeviceDetailPage() {
     if (!device || !deviceId) return;
     setSaving(true);
     setSaveError(null);
-    setSaveSuccess(false);
     try {
       const updated = await devicesApi.update(userId, deviceId, {
         status: editStatus,
@@ -101,8 +99,6 @@ export function DeviceDetailPage() {
         version: device.version,
       });
       setDevice(updated);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2500);
     } catch (e: unknown) {
       setSaveError(e instanceof Error ? e.message : "Failed to save");
     } finally {
@@ -231,7 +227,6 @@ export function DeviceDetailPage() {
             </Select>
           </FormControl>
           {saveError && <Alert severity="error">{saveError}</Alert>}
-          {saveSuccess && <Alert severity="success">Saved successfully</Alert>}
           <Box>
             <Button
               variant="contained"

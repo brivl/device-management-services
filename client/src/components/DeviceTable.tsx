@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { Link } from "react-router-dom";
-import type { Device } from "@dms/common/types";
+import type { Device, DeviceStatus } from "@dms/common/types";
 
 type Props = {
   devices: Device[];
@@ -19,7 +19,7 @@ type Props = {
   onDelete: (id: string) => Promise<void>;
 };
 
-const statusColor = (s: Device["status"]): "success" | "warning" | "default" =>
+const statusColor = (s: DeviceStatus): "success" | "warning" | "default" =>
   s === "enabled" ? "success" : s === "sleep" ? "warning" : "default";
 
 export function DeviceTable({ devices, loading, onDelete }: Props) {
