@@ -15,7 +15,6 @@ export type Device = {
   name: string;
   status: DeviceStatus;
   configuration: Record<string, unknown>;
-  desired: DesiredState | null;
   version: number;
   createdAt: string;
   updatedAt: string;

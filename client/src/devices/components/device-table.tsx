@@ -1,3 +1,5 @@
+import type { Device, DeviceStatus } from "@dms/common/types";
+import DeleteIcon from "@mui/icons-material/Delete";
 import {
   Box,
   Chip,
@@ -9,9 +11,7 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
 import { Link } from "react-router-dom";
-import type { Device, DeviceStatus } from "@dms/common/types";
 
 type Props = {
   devices: Device[];

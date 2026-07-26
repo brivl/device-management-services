@@ -6,7 +6,6 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   FormControl,
   IconButton,
@@ -24,9 +23,6 @@ import { devicesApi } from "../../api/devices";
 
 const MODES = ["auto", "manual", "scheduled"] as const;
 type Mode = (typeof MODES)[number];
-
-const statusColor = (s: DeviceStatus): "success" | "warning" | "default" =>
-  s === "enabled" ? "success" : s === "sleep" ? "warning" : "default";
 
 function readBrightness(config: Record<string, unknown>): number {
   const v = config.brightness;
@@ -79,6 +75,9 @@ export function DeviceDetailPage() {
     es.addEventListener("device-updated", (e) => {
       const updated = JSON.parse((e as MessageEvent<string>).data) as Device;
       setDevice(updated);
+      setEditStatus(updated.status);
+      setBrightness(readBrightness(updated.configuration));
+      setMode(readMode(updated.configuration));
     });
     return () => {
       es.close();
@@ -91,11 +90,10 @@ export function DeviceDetailPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const updated = await devicesApi.update(deviceId, {
+      await devicesApi.update(deviceId, {
         status: editStatus,
         configuration: { brightness, mode },
       });
-      setDevice(updated);
     } catch (e: unknown) {
       setSaveError(e instanceof Error ? e.message : "Failed to save");
     } finally {
@@ -135,37 +133,15 @@ export function DeviceDetailPage() {
         </Tooltip>
       </Box>
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Status
-            </Typography>
-            <Box>
-              <Chip
-                label={device.status}
-                color={statusColor(device.status)}
-                size="small"
-              />
-            </Box>
-          </Box>
+      <Paper sx={{ p: 3 }}>
+        <Box
+          sx={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 2 }}
+        >
           <Box>
             <Typography variant="caption" color="text.secondary">
               Version
             </Typography>
             <Typography>{device.version}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Brightness
-            </Typography>
-            <Typography>{readBrightness(device.configuration)}%</Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Mode
-            </Typography>
-            <Typography>{readMode(device.configuration)}</Typography>
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
@@ -176,12 +152,6 @@ export function DeviceDetailPage() {
             </Typography>
           </Box>
         </Box>
-      </Paper>
-
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Edit
-        </Typography>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <FormControl fullWidth>
             <InputLabel>Status</InputLabel>

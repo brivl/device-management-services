@@ -7,7 +7,7 @@ import {
   Typography,
   createTheme,
 } from "@mui/material";
-import { Route, Routes } from "react-router-dom";
+import { Link, Route, Routes } from "react-router-dom";
 import { DeviceDetailPage } from "./devices/pages/device-detail-page";
 import { DeviceListPage } from "./devices/pages/device-list-page";
 
@@ -19,7 +19,18 @@ export default function App() {
       <CssBaseline />
       <AppBar position="static">
         <Toolbar>
-          <Typography variant="h6">Device Management</Typography>
+          <Typography variant="h6">
+            <Link
+              style={{
+                textDecoration: "none",
+                color: "inherit",
+                fontWeight: 500,
+              }}
+              to="/"
+            >
+              Device Management
+            </Link>
+          </Typography>
         </Toolbar>
       </AppBar>
       <Box component="main" sx={{ p: 3 }}>
