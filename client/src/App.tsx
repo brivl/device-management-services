@@ -3,6 +3,7 @@ import { AppBar, Toolbar, Typography, Box } from "@mui/material";
 import { Routes, Route } from "react-router-dom";
 import { UserSwitcher } from "./components/UserSwitcher";
 import { DeviceListPage } from "./pages/DeviceListPage";
+import { DeviceDetailPage } from "./pages/DeviceDetailPage";
 
 const theme = createTheme();
 
@@ -21,7 +22,7 @@ export default function App() {
       <Box component="main" sx={{ p: 3 }}>
         <Routes>
           <Route path="/" element={<DeviceListPage />} />
-          <Route path="/devices/:deviceId" element={<div />} />
+          <Route path="/devices/:deviceId" element={<DeviceDetailPage />} />
         </Routes>
       </Box>
     </ThemeProvider>
