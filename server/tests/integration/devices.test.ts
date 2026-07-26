@@ -82,26 +82,7 @@ describe("POST /devices", () => {
 });
 
 describe("PATCH /devices/:deviceId", () => {
-  it("returns 409 on version mismatch", async () => {
-    const { id } = (
-      await app.inject({
-        method: "POST",
-        url: "/devices",
-        headers,
-        payload: { name: "Conflict Light", status: "enabled" },
-      })
-    ).json();
-
-    const res = await app.inject({
-      method: "PATCH",
-      url: `/devices/${id}`,
-      headers,
-      payload: { status: "off", version: 99 },
-    });
-    expect(res.statusCode).toBe(409);
-  });
-
-  it("increments version on success", async () => {
+  it("sets desired state and increments version", async () => {
     const { id, version } = (
       await app.inject({
         method: "POST",
@@ -115,10 +96,13 @@ describe("PATCH /devices/:deviceId", () => {
       method: "PATCH",
       url: `/devices/${id}`,
       headers,
-      payload: { status: "off", version },
+      payload: { status: "off" },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json().version).toBe(version + 1);
+    const body = res.json();
+    expect(body.version).toBe(version + 1);
+    expect(body.desired.status).toBe("off");
+    expect(body.status).toBe("enabled"); // actual unchanged until device syncs
   });
 });
 

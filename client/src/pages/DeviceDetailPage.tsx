@@ -96,7 +96,6 @@ export function DeviceDetailPage() {
       const updated = await devicesApi.update(userId, deviceId, {
         status: editStatus,
         configuration: { brightness, mode },
-        version: device.version,
       });
       setDevice(updated);
     } catch (e: unknown) {

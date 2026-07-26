@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
-import type { DesiredState } from "@dms/common/types";
+import type { ActualState, DesiredState } from "@dms/common/types";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
@@ -10,10 +10,7 @@ export const users = sqliteTable("users", {
 export const devices = sqliteTable("devices", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  status: text("status", { enum: ["enabled", "sleep", "off"] }).notNull(),
-  configuration: text("configuration", { mode: "json" })
-    .notNull()
-    .$type<Record<string, unknown>>(),
+  actual: text("actual", { mode: "json" }).notNull().$type<ActualState>(),
   desired: text("desired", { mode: "json" }).$type<DesiredState | null>(),
   version: integer("version").notNull().default(0),
   createdAt: text("created_at").notNull(),

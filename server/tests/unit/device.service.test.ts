@@ -25,12 +25,14 @@ import { NotFoundError, ConflictError } from "../../src/errors.ts";
 const repo = vi.mocked(deviceRepository);
 const broadcaster = vi.mocked(deviceBroadcaster);
 
-// Repository row shape (includes deletedAt)
+// Repository row shape: uses actual/desired JSON columns
 const DEVICE_ROW = {
   id: "device-1",
   name: "Test Light",
-  status: "enabled" as const,
-  configuration: { brightness: 100 } as Record<string, unknown>,
+  actual: {
+    status: "enabled" as const,
+    configuration: { brightness: 100 } as Record<string, unknown>,
+  },
   desired: null as null,
   version: 2,
   createdAt: "2024-01-01T00:00:00.000Z",
@@ -38,7 +40,7 @@ const DEVICE_ROW = {
   deletedAt: null as null,
 };
 
-// Service output shape (deletedAt stripped by toDevice)
+// Service output shape: actual is flattened, deletedAt stripped
 const DEVICE = {
   id: "device-1",
   name: "Test Light",
@@ -102,7 +104,9 @@ describe("deviceService.create", () => {
     await deviceService.create({ name: "Light", status: "enabled" }, "user-1");
     expect(repo.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        configuration: { brightness: 100, mode: "auto" },
+        actual: expect.objectContaining({
+          configuration: { brightness: 100, mode: "auto" },
+        }),
       }),
     );
   });
@@ -114,7 +118,9 @@ describe("deviceService.create", () => {
       "user-1",
     );
     expect(repo.create).toHaveBeenCalledWith(
-      expect.objectContaining({ configuration: { brightness: 50 } }),
+      expect.objectContaining({
+        actual: expect.objectContaining({ configuration: { brightness: 50 } }),
+      }),
     );
   });
 
@@ -139,11 +145,11 @@ describe("deviceService.update", () => {
     repo.isOwnedByUser.mockReturnValue(true);
     repo.update.mockReturnValue(undefined); // simulates DB version mismatch
     await expect(
-      deviceService.update("device-1", "user-1", { version: 1, status: "off" }),
+      deviceService.update("device-1", "user-1", { status: "off" }),
     ).rejects.toThrow(ConflictError);
   });
 
-  it("sets desired state instead of applying directly", async () => {
+  it("sets desired state — does not update actual directly", async () => {
     repo.findById.mockReturnValue(DEVICE_ROW);
     repo.isOwnedByUser.mockReturnValue(true);
     const updatedRow = {
@@ -152,20 +158,17 @@ describe("deviceService.update", () => {
       desired: { status: "off" as const },
     };
     repo.update.mockReturnValue(updatedRow);
-    await deviceService.update("device-1", "user-1", {
-      version: 2,
-      status: "off",
-    });
+    await deviceService.update("device-1", "user-1", { status: "off" });
     expect(repo.update).toHaveBeenCalledWith(
       "device-1",
-      2,
+      2, // current.version from DEVICE_ROW
       expect.objectContaining({ desired: { status: "off" }, version: 3 }),
     );
-    // Actual status is NOT written — only desired
+    // actual is NOT written — only desired
     expect(repo.update).not.toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
-      expect.objectContaining({ status: "off" }),
+      expect.objectContaining({ actual: expect.anything() }),
     );
   });
 
@@ -178,10 +181,7 @@ describe("deviceService.update", () => {
       desired: { status: "off" as const },
     };
     repo.update.mockReturnValue(updatedRow);
-    await deviceService.update("device-1", "user-1", {
-      version: 2,
-      status: "off",
-    });
+    await deviceService.update("device-1", "user-1", { status: "off" });
     expect(repo.createHistory).toHaveBeenCalledWith(
       expect.objectContaining({
         deviceId: "device-1",
@@ -200,10 +200,7 @@ describe("deviceService.update", () => {
       desired: { status: "off" as const },
     };
     repo.update.mockReturnValue(updatedRow);
-    await deviceService.update("device-1", "user-1", {
-      version: 2,
-      status: "off",
-    });
+    await deviceService.update("device-1", "user-1", { status: "off" });
     expect(broadcaster.broadcast).toHaveBeenCalledWith(
       "device-1",
       expect.objectContaining({ version: 3, desired: { status: "off" } }),

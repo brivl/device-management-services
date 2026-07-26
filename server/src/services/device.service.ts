@@ -1,59 +1,20 @@
-import { v4 as uuidv4 } from "uuid";
 import type {
-  Device,
+  ActualState,
   CreateDeviceInput,
-  UpdateDeviceInput,
   DesiredState,
+  Device,
+  UpdateDeviceInput,
 } from "@dms/common/types";
 import { SEEDED_USERS } from "@dms/common/users";
+import { v4 as uuidv4 } from "uuid";
+import { ConflictError, NotFoundError } from "../errors.ts";
 import {
   deviceRepository,
   type DeviceRow,
 } from "../repositories/device.repository.ts";
 import { deviceBroadcaster } from "../sse/device-broadcaster.ts";
-import { NotFoundError, ConflictError } from "../errors.ts";
 
 const defaultConfiguration = { brightness: 100, mode: "auto" };
-
-function toDevice(row: DeviceRow): Device {
-  return {
-    id: row.id,
-    name: row.name,
-    status: row.status,
-    configuration: row.configuration,
-    desired: row.desired ?? null,
-    version: row.version,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
-// Simulates the device reading the desired state and applying it (~1.5s latency).
-// In production a real device would acknowledge the command and report back its new state.
-async function scheduleSync(
-  deviceId: string,
-  pendingVersion: number,
-): Promise<void> {
-  await new Promise<void>((resolve) => setTimeout(resolve, 1500));
-
-  const row = deviceRepository.findById(deviceId);
-  if (!row?.desired || row.version !== pendingVersion) return;
-
-  const { desired } = row;
-  const now = new Date().toISOString();
-  const synced = deviceRepository.update(deviceId, pendingVersion, {
-    ...(desired.status !== undefined && { status: desired.status }),
-    ...(desired.configuration !== undefined && {
-      configuration: desired.configuration,
-    }),
-    desired: null,
-    version: pendingVersion + 1,
-    updatedAt: now,
-  });
-  if (!synced) return;
-
-  deviceBroadcaster.broadcast(deviceId, toDevice(synced));
-}
 
 export const deviceService = {
   async list(userId: string): Promise<Device[]> {
@@ -73,8 +34,10 @@ export const deviceService = {
     const row = deviceRepository.create({
       id: uuidv4(),
       name: data.name,
-      status: data.status,
-      configuration: data.configuration ?? defaultConfiguration,
+      actual: {
+        status: data.status,
+        configuration: data.configuration ?? defaultConfiguration,
+      },
       desired: null,
       version: 0,
       createdAt: now,
@@ -95,9 +58,10 @@ export const deviceService = {
     userId: string,
     data: UpdateDeviceInput,
   ): Promise<Device> {
-    await this.get(deviceId, userId);
+    const current = await this.get(deviceId, userId);
 
     // IoT desired/actual pattern: PATCH sets what the device *should* become.
+    // Version is managed server-side — clients no longer need to track it.
     // scheduleSync applies the desired state ~1.5s later and broadcasts via SSE,
     // mirroring how a real device acknowledges and applies a command.
     const desired: DesiredState = {};
@@ -106,9 +70,9 @@ export const deviceService = {
       desired.configuration = data.configuration;
 
     const now = new Date().toISOString();
-    const updated = deviceRepository.update(deviceId, data.version, {
+    const updated = deviceRepository.update(deviceId, current.version, {
       desired,
-      version: data.version + 1,
+      version: current.version + 1,
       updatedAt: now,
     });
     if (!updated) throw new ConflictError("Version mismatch");
@@ -131,3 +95,44 @@ export const deviceService = {
     deviceRepository.delete(deviceId, new Date().toISOString());
   },
 };
+
+function toDevice(row: DeviceRow): Device {
+  return {
+    id: row.id,
+    name: row.name,
+    status: row.actual.status,
+    configuration: row.actual.configuration,
+    desired: row.desired ?? null,
+    version: row.version,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+// Simulates the device reading the desired state and applying it (~1.5s latency).
+// In production a real device would acknowledge the command and report back its new state.
+async function scheduleSync(
+  deviceId: string,
+  pendingVersion: number,
+): Promise<void> {
+  await new Promise<void>((resolve) => setTimeout(resolve, 1500));
+
+  const row = deviceRepository.findById(deviceId);
+  if (!row?.desired || row.version !== pendingVersion) return;
+
+  const { desired } = row;
+  const actual: ActualState = {
+    status: desired.status ?? row.actual.status,
+    configuration: desired.configuration ?? row.actual.configuration,
+  };
+  const now = new Date().toISOString();
+  const synced = deviceRepository.update(deviceId, pendingVersion, {
+    actual,
+    desired: null,
+    version: pendingVersion + 1,
+    updatedAt: now,
+  });
+  if (!synced) return;
+
+  deviceBroadcaster.broadcast(deviceId, toDevice(synced));
+}

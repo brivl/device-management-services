@@ -60,7 +60,7 @@ describe("full device lifecycle", () => {
       method: "PATCH",
       url: `/devices/${device.id}`,
       headers,
-      payload: { status: "off", version: device.version },
+      payload: { status: "off" },
     });
     expect(patchRes.statusCode).toBe(200);
     const updated = patchRes.json();

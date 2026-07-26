@@ -1,5 +1,10 @@
 export type DeviceStatus = "enabled" | "sleep" | "off";
 
+export type ActualState = {
+  status: DeviceStatus;
+  configuration: Record<string, unknown>;
+};
+
 export type DesiredState = {
   status?: DeviceStatus;
   configuration?: Record<string, unknown>;
@@ -25,5 +30,4 @@ export type CreateDeviceInput = {
 export type UpdateDeviceInput = {
   status?: DeviceStatus;
   configuration?: Record<string, unknown>;
-  version: number;
 };
