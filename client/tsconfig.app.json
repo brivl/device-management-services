@@ -20,7 +20,11 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@dms/common/types": ["../common/src/types.ts"],
+      "@dms/common/users": ["../common/src/users.ts"]
+    }
   },
   "include": ["src"]
 }

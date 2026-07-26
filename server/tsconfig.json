@@ -7,7 +7,11 @@
     "noEmit": true,
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@dms/common/types": ["../common/src/types.ts"],
+      "@dms/common/users": ["../common/src/users.ts"]
+    }
   },
   "include": ["src", "tests"]
 }

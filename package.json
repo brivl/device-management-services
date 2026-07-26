@@ -1,0 +1,5 @@
+{
+  "name": "device-management-services",
+  "private": true,
+  "workspaces": ["common", "server", "client"]
+}

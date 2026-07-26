@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import type { CreateDeviceInput, UpdateDeviceInput } from "@dms/common/types";
 import { deviceRepository } from "../repositories/device.repository.ts";
 import { deviceBroadcaster } from "../sse/device-broadcaster.ts";
 import { NotFoundError, ConflictError } from "../errors.ts";
@@ -19,14 +20,7 @@ export const deviceService = {
     return device;
   },
 
-  async create(
-    data: {
-      name: string;
-      status: "enabled" | "sleep" | "off";
-      configuration?: Record<string, unknown>;
-    },
-    userId: string,
-  ) {
+  async create(data: CreateDeviceInput, userId: string) {
     const now = new Date().toISOString();
     const device = deviceRepository.create({
       id: uuidv4(),
@@ -42,22 +36,12 @@ export const deviceService = {
     return device;
   },
 
-  async update(
-    deviceId: string,
-    userId: string,
-    data: {
-      status?: string;
-      configuration?: Record<string, unknown>;
-      version: number;
-    },
-  ) {
+  async update(deviceId: string, userId: string, data: UpdateDeviceInput) {
     await this.get(deviceId, userId);
 
     const now = new Date().toISOString();
     const updated = deviceRepository.update(deviceId, data.version, {
-      ...(data.status !== undefined && {
-        status: data.status as "enabled" | "sleep" | "off",
-      }),
+      ...(data.status !== undefined && { status: data.status }),
       ...(data.configuration !== undefined && {
         configuration: data.configuration,
       }),

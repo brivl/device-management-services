@@ -13,6 +13,7 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@dms/common": "*",
     "@fastify/cors": "^11.3.0",
     "@fastify/sse": "^0.5.0",
     "@fastify/swagger": "^9.8.1",
