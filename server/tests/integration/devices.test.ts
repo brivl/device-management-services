@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from "../../src/db/schema.ts";
 import { users } from "../../src/db/schema.ts";
+import { SEEDED_USERS } from "@dms/common/users";
 
 // Must be let so the getter closes over it after assignment
 // eslint-disable-next-line prefer-const
@@ -22,19 +23,19 @@ testDb = drizzle(sqlite, { schema });
 
 import { buildApp } from "../../src/app.ts";
 
-const TEST_USER = {
-  id: "integ-user-0000-0000-000000000001",
-  name: "Integration User",
-};
+const TEST_USER = SEEDED_USERS[0];
 const headers = { "x-user-id": TEST_USER.id };
 const app = buildApp();
 
 beforeAll(async () => {
   migrate(testDb, { migrationsFolder: "./drizzle" });
-  testDb
-    .insert(users)
-    .values({ ...TEST_USER, createdAt: new Date().toISOString() })
-    .run();
+  const now = new Date().toISOString();
+  for (const user of SEEDED_USERS) {
+    testDb
+      .insert(users)
+      .values({ ...user, createdAt: now })
+      .run();
+  }
   await app.ready();
 });
 

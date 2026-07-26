@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import type { CreateDeviceInput, UpdateDeviceInput } from "@dms/common/types";
+import { SEEDED_USERS } from "@dms/common/users";
 import { deviceRepository } from "../repositories/device.repository.ts";
 import { deviceBroadcaster } from "../sse/device-broadcaster.ts";
 import { NotFoundError, ConflictError } from "../errors.ts";
@@ -32,7 +33,12 @@ export const deviceService = {
       updatedAt: now,
       deletedAt: null,
     });
-    deviceRepository.createUserDevice(userId, device.id);
+    // Simulation: associate with all seeded users so any user can see and edit
+    // any device — makes SSE demo testable via the UserSwitcher without extra setup.
+    // In production this would only associate the creator (userId).
+    for (const user of SEEDED_USERS) {
+      deviceRepository.createUserDevice(user.id, device.id);
+    }
     return device;
   },
 

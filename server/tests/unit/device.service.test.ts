@@ -104,10 +104,15 @@ describe("deviceService.create", () => {
     );
   });
 
-  it("creates User_Device link after creating device", async () => {
+  it("creates User_Device link for all seeded users", async () => {
     repo.create.mockReturnValue(DEVICE);
     await deviceService.create({ name: "Light", status: "enabled" }, "user-1");
-    expect(repo.createUserDevice).toHaveBeenCalledWith("user-1", DEVICE.id);
+    // Simulation mode: device is shared with all seeded users so any user can demo SSE
+    const { SEEDED_USERS } = await import("@dms/common/users");
+    expect(repo.createUserDevice).toHaveBeenCalledTimes(SEEDED_USERS.length);
+    for (const user of SEEDED_USERS) {
+      expect(repo.createUserDevice).toHaveBeenCalledWith(user.id, DEVICE.id);
+    }
   });
 });
 
@@ -177,10 +182,7 @@ describe("deviceService.delete", () => {
       deletedAt: "2024-01-02T00:00:00.000Z",
     });
     await deviceService.delete("device-1", "user-1");
-    expect(repo.delete).toHaveBeenCalledWith(
-      "device-1",
-      expect.any(String),
-    );
+    expect(repo.delete).toHaveBeenCalledWith("device-1", expect.any(String));
   });
 
   it("throws NotFoundError when device not found", async () => {
