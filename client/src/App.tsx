@@ -8,7 +8,6 @@ import {
   createTheme,
 } from "@mui/material";
 import { Route, Routes } from "react-router-dom";
-import { UserSwitcher } from "./devices/components/user-switcher";
 import { DeviceDetailPage } from "./devices/pages/device-detail-page";
 import { DeviceListPage } from "./devices/pages/device-list-page";
 
@@ -20,10 +19,7 @@ export default function App() {
       <CssBaseline />
       <AppBar position="static">
         <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Device Management
-          </Typography>
-          <UserSwitcher />
+          <Typography variant="h6">Device Management</Typography>
         </Toolbar>
       </AppBar>
       <Box component="main" sx={{ p: 3 }}>

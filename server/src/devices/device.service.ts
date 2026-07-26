@@ -5,7 +5,6 @@ import type {
   Device,
   UpdateDeviceInput,
 } from "@dms/common/types";
-import { SEEDED_USERS } from "@dms/common/users";
 import { v4 as uuidv4 } from "uuid";
 import { ConflictError, NotFoundError } from "../errors.ts";
 import { deviceBroadcaster } from "../sse/device-broadcaster.ts";
@@ -14,19 +13,17 @@ import { deviceRepository, type DeviceRow } from "./device.repository.ts";
 const defaultConfiguration = { brightness: 100, mode: "auto" };
 
 export const deviceService = {
-  async list(userId: string): Promise<Device[]> {
-    return deviceRepository.findAllByUserId(userId).map(toDevice);
+  async list(): Promise<Device[]> {
+    return deviceRepository.findAll().map(toDevice);
   },
 
-  async get(deviceId: string, userId: string): Promise<Device> {
+  async get(deviceId: string): Promise<Device> {
     const row = deviceRepository.findById(deviceId);
     if (!row || row.deletedAt) throw new NotFoundError("Device not found");
-    if (!deviceRepository.isOwnedByUser(deviceId, userId))
-      throw new NotFoundError("Device not found");
     return toDevice(row);
   },
 
-  async create(data: CreateDeviceInput, userId: string): Promise<Device> {
+  async create(data: CreateDeviceInput): Promise<Device> {
     const now = new Date().toISOString();
     const row = deviceRepository.create({
       id: uuidv4(),
@@ -41,24 +38,13 @@ export const deviceService = {
       updatedAt: now,
       deletedAt: null,
     });
-    // Simulation: associate with all seeded users so any user can see and edit
-    // any device — makes SSE demo testable via the UserSwitcher without extra setup.
-    // In production this would only associate the creator (userId).
-    for (const user of SEEDED_USERS) {
-      deviceRepository.createUserDevice(user.id, row.id);
-    }
     return toDevice(row);
   },
 
-  async update(
-    deviceId: string,
-    userId: string,
-    data: UpdateDeviceInput,
-  ): Promise<Device> {
-    const current = await this.get(deviceId, userId);
+  async update(deviceId: string, data: UpdateDeviceInput): Promise<Device> {
+    const current = await this.get(deviceId);
 
     // IoT desired/actual pattern: PATCH sets what the device *should* become.
-    // Version is managed server-side — clients no longer need to track it.
     // scheduleSync applies the desired state ~1.5s later and broadcasts via SSE,
     // mirroring how a real device acknowledges and applies a command.
     const desired: DesiredState = {};
@@ -87,8 +73,8 @@ export const deviceService = {
     return device;
   },
 
-  async delete(deviceId: string, userId: string): Promise<void> {
-    await this.get(deviceId, userId);
+  async delete(deviceId: string): Promise<void> {
+    await this.get(deviceId);
     deviceRepository.delete(deviceId, new Date().toISOString());
   },
 };

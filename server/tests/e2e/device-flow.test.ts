@@ -4,8 +4,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { eq } from "drizzle-orm";
 import * as schema from "../../src/db/schema.ts";
-import { users, deviceHistory } from "../../src/db/schema.ts";
-import { SEEDED_USERS } from "@dms/common/users";
+import { deviceHistory } from "../../src/db/schema.ts";
 
 // eslint-disable-next-line prefer-const
 let testDb: ReturnType<typeof drizzle>;
@@ -22,19 +21,10 @@ testDb = drizzle(sqlite, { schema });
 
 import { buildApp } from "../../src/app.ts";
 
-const TEST_USER = SEEDED_USERS[0];
-const headers = { "x-user-id": TEST_USER.id };
 const app = buildApp();
 
 beforeAll(async () => {
   migrate(testDb, { migrationsFolder: "./drizzle" });
-  const now = new Date().toISOString();
-  for (const user of SEEDED_USERS) {
-    testDb
-      .insert(users)
-      .values({ ...user, createdAt: now })
-      .run();
-  }
   await app.ready();
 });
 
@@ -45,7 +35,6 @@ describe("full device lifecycle", () => {
     const createRes = await app.inject({
       method: "POST",
       url: "/devices",
-      headers,
       payload: {
         name: "Living Room Light",
         status: "enabled",
@@ -59,13 +48,11 @@ describe("full device lifecycle", () => {
     const patchRes = await app.inject({
       method: "PATCH",
       url: `/devices/${device.id}`,
-      headers,
       payload: { status: "off" },
     });
     expect(patchRes.statusCode).toBe(200);
     const updated = patchRes.json();
     expect(updated.version).toBe(1);
-    // Desired/actual pattern: PATCH sets desired state, actual status is unchanged until sync
     expect(updated.desired.status).toBe("off");
     expect(updated.status).toBe("enabled");
 

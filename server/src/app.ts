@@ -3,8 +3,7 @@ import cors from "@fastify/cors";
 import sse from "@fastify/sse";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
-import { authMiddleware } from "./middleware/auth.ts";
-import { deviceRoutes } from "./routes/devices.ts";
+import { deviceRoutes } from "./devices/devices.ts";
 
 export function buildApp() {
   const app = Fastify({ logger: true });
@@ -13,16 +12,9 @@ export function buildApp() {
   app.register(swagger, {
     openapi: {
       info: { title: "Device Management API", version: "1.0.0" },
-      components: {
-        securitySchemes: {
-          userId: { type: "apiKey", in: "header", name: "X-User-Id" },
-        },
-      },
-      security: [{ userId: [] }],
     },
   });
   app.register(swaggerUi, { routePrefix: "/docs" });
-  app.addHook("preHandler", authMiddleware);
   app.register(deviceRoutes, { prefix: "/devices" });
   app.setErrorHandler((err, _req, reply) => {
     const e = err as Error & { statusCode?: number };

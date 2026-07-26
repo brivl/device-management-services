@@ -21,7 +21,6 @@ import {
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { devicesApi } from "../../api/devices";
-import { useUser } from "../../context/user-context";
 
 const MODES = ["auto", "manual", "scheduled"] as const;
 type Mode = (typeof MODES)[number];
@@ -41,7 +40,6 @@ function readMode(config: Record<string, unknown>): Mode {
 
 export function DeviceDetailPage() {
   const { deviceId } = useParams<{ deviceId: string }>();
-  const { userId } = useUser();
   const navigate = useNavigate();
 
   const [device, setDevice] = useState<Device | null>(null);
@@ -60,7 +58,7 @@ export function DeviceDetailPage() {
     setLoading(true);
     setFetchError(null);
     devicesApi
-      .get(userId, deviceId)
+      .get(deviceId)
       .then((d) => {
         setDevice(d);
         setEditStatus(d.status);
@@ -71,7 +69,7 @@ export function DeviceDetailPage() {
         setFetchError(e instanceof Error ? e.message : "Failed to load device"),
       )
       .finally(() => setLoading(false));
-  }, [userId, deviceId]);
+  }, [deviceId]);
 
   useEffect(() => {
     if (!deviceId) return;
@@ -93,7 +91,7 @@ export function DeviceDetailPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const updated = await devicesApi.update(userId, deviceId, {
+      const updated = await devicesApi.update(deviceId, {
         status: editStatus,
         configuration: { brightness, mode },
       });

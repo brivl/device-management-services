@@ -1,12 +1,6 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import type { ActualState, DesiredState } from "@dms/common/types";
 
-export const users = sqliteTable("users", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  createdAt: text("created_at").notNull(),
-});
-
 export const devices = sqliteTable("devices", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -27,13 +21,4 @@ export const deviceHistory = sqliteTable("device_history", {
     .notNull()
     .$type<Record<string, unknown>>(),
   createdAt: text("created_at").notNull(),
-});
-
-export const userDevices = sqliteTable("user_devices", {
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id),
-  deviceId: text("device_id")
-    .notNull()
-    .references(() => devices.id),
 });

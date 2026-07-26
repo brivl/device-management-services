@@ -52,7 +52,7 @@ Version is managed server-side and incremented on every write (both on PATCH and
 | Method | Path                        | Description                              |
 | ------ | --------------------------- | ---------------------------------------- |
 | POST   | `/devices`                  | Register a new device                    |
-| GET    | `/devices`                  | List all devices for the requesting user |
+| GET    | `/devices`                  | List all devices                         |
 | GET    | `/devices/:deviceId`        | Get a specific device by ID              |
 | PATCH  | `/devices/:deviceId`        | Send a command to the device             |
 | DELETE | `/devices/:deviceId`        | Soft-delete a device                     |
@@ -126,22 +126,12 @@ DeviceHistory
   version         integer
   snapshot        JSON  ← full device state at this version
   created_at      timestamp
-
-User
-  id              uuid (PK)
-  name            string
-  created_at      timestamp
-
-User_Device
-  user_id         uuid (FK → User)
-  device_id       uuid (FK → Device)
 ```
 
-**Out of scope (assumed to exist)**
+**Out of scope**
 
-- User creation & authentication
-- User–device connection management
-- Reading device history
+- Authentication / user management — in a production system each request would carry a token validated server-side, and devices would be associated to their owner via a `user_devices` junction table. The API surface would be unchanged; the service layer would add ownership checks using the resolved user identity.
+- Reading device history — the audit trail is written on every PATCH but there is no GET endpoint for it.
 
 https://excalidraw.com/#json=JFFAJK8Els1IJbE7S6QUM,rspQOdGrLDpatiNqkCR_Ng
 ![alt text](image-1.png)
@@ -163,9 +153,9 @@ npm run dev:server
 npm run dev:client
 ```
 
-The database file (`db.sqlite`) is created automatically on first run. Seeds test users.
+The database file (`db.sqlite`) is created automatically on first run.
 
-**Testing multi-user SSE:** Open `http://localhost:5173` in two browser windows. Select different users in the top bar. Make a change in one window and watch both windows update live as the simulated device acknowledges the command ~1.5 s later.
+**Testing SSE:** Open `http://localhost:5173` in two browser tabs, navigate to the same device, then save a change in one tab. Both tabs receive the live update ~1.5 s later when the simulated device acknowledges the command.
 
 ---
 
@@ -181,10 +171,10 @@ npm run test:unit
 
 Each service function is tested in isolation with a mocked repository:
 
-- `createDevice` — uses `defaultConfiguration` when none provided; creates User_Device links for all seeded users
+- `createDevice` — uses `defaultConfiguration` when none provided
 - `updateDevice` — writes desired state without touching actual; increments version; broadcasts SSE on success
-- `deleteDevice` — sets `deleted_at`; returns 404 for unknown or unowned device
-- `listDevices` — excludes soft-deleted devices
+- `deleteDevice` — sets `deleted_at`; returns 404 for unknown device
+- `listDevices` — returns only non-deleted devices
 
 ### Integration Tests — full request/response against real SQLite
 

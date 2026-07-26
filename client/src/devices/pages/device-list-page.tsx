@@ -3,12 +3,10 @@ import AddIcon from "@mui/icons-material/Add";
 import { Box, Button, Typography } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import { devicesApi } from "../../api/devices";
-import { useUser } from "../../context/user-context";
 import { CreateDeviceDialog } from "../components/create-device-dialog";
 import { DeviceTable } from "../components/device-table";
 
 export function DeviceListPage() {
-  const { userId } = useUser();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,26 +16,26 @@ export function DeviceListPage() {
     setLoading(true);
     setError(null);
     try {
-      setDevices(await devicesApi.list(userId));
+      setDevices(await devicesApi.list());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load devices");
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     void fetchDevices();
   }, [fetchDevices]);
 
   const handleCreate = async (data: CreateDeviceInput) => {
-    await devicesApi.create(userId, data);
+    await devicesApi.create(data);
     setCreateOpen(false);
     void fetchDevices();
   };
 
   const handleDelete = async (id: string) => {
-    await devicesApi.delete(userId, id);
+    await devicesApi.delete(id);
     void fetchDevices();
   };
 
