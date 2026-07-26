@@ -1,10 +1,10 @@
-import type { FastifyInstance } from "fastify";
 import type {
-  Device,
   CreateDeviceInput,
+  Device,
   UpdateDeviceInput,
 } from "@dms/common/types";
-import { deviceService } from "../services/device.service.ts";
+import type { FastifyInstance } from "fastify";
+import { deviceService } from "../devices/device.service.ts";
 import { deviceBroadcaster } from "../sse/device-broadcaster.ts";
 
 export async function deviceRoutes(app: FastifyInstance) {
@@ -52,11 +52,9 @@ export async function deviceRoutes(app: FastifyInstance) {
       schema: {
         body: {
           type: "object",
-          required: ["version"],
           properties: {
             status: { type: "string", enum: ["enabled", "sleep", "off"] },
             configuration: { type: "object" },
-            version: { type: "integer", minimum: 0 },
           },
         },
       },

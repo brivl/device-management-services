@@ -60,12 +60,14 @@ describe("full device lifecycle", () => {
       method: "PATCH",
       url: `/devices/${device.id}`,
       headers,
-      payload: { status: "off", version: device.version },
+      payload: { status: "off" },
     });
     expect(patchRes.statusCode).toBe(200);
     const updated = patchRes.json();
     expect(updated.version).toBe(1);
-    expect(updated.status).toBe("off");
+    // Desired/actual pattern: PATCH sets desired state, actual status is unchanged until sync
+    expect(updated.desired.status).toBe("off");
+    expect(updated.status).toBe("enabled");
 
     const history = testDb
       .select()

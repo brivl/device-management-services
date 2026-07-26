@@ -21,30 +21,29 @@ Objectives:
 
 ## Tech Stack
 
-| Layer      | Technology              |
-| ---------- | ----------------------- |
-| Backend    | TypeScript + Fastify    |
-| ORM        | Drizzle ORM             |
-| Database   | SQLite                  |
-| Frontend   | React + MUI             |
-| Testing    | Vitest                  |
-| Deployment | Docker + Docker Compose |
+| Layer    | Technology           |
+| -------- | -------------------- |
+| Backend  | TypeScript + Fastify |
+| ORM      | Drizzle ORM          |
+| Database | SQLite               |
+| Frontend | React + MUI          |
+| Testing  | Vitest               |
 
 ---
 
 ## Architecture & Key Design Decisions
 
-**Auth simulation** — User creation and auth are out of scope. At startup, 2–3 users are seeded into the DB. All requests require an `X-User-Id` header; a Fastify `preHandler` validates it against seeded users and attaches the user to the request context. The React UI provides a user-switcher in the top bar — open two browser windows with different users to observe SSE updates live.
+Following REST API best practices. Backend is split in vertical layers: routes (controllers) -> services -> repositories for clean separation of concerns and ease of testing when we need to mock different layers.
 
-**Soft deletes** — Devices are never hard-deleted. `DELETE /devices/:deviceId` sets `deleted_at`; all list and detail endpoints filter `WHERE deleted_at IS NULL`.
+**Desired / actual state (IoT shadow pattern)** — `PATCH` writes the requested change to a `desired` JSON column and returns immediately. A simulated device acknowledgement fires ~1.5 s later: the server reads `desired`, merges it into `actual`, clears `desired`, and broadcasts the updated device via SSE. This mirrors how AWS IoT Device Shadow works — the cloud accepts commands instantly, and the physical device applies them asynchronously. The frontend displays the device's confirmed `actual` state and receives the live update over SSE with no polling needed.
 
-**Optimistic locking** — `PATCH` requires a `version` field in the body matching the current DB version. On mismatch the server returns `409 Conflict`. On success, version is incremented and a `DeviceHistory` snapshot is written.
+Version is managed server-side and incremented on every write (both on PATCH and on sync). Clients never supply a version; the field is exposed in the API for audit and history purposes only.
 
 **Device History** — Every successful `PATCH` writes a full JSON snapshot of the device state to `DeviceHistory`. Reading history is out of scope (no GET endpoint), but the audit trail is persisted for future use.
 
-**Real-time updates (SSE)** — The server holds an in-memory `Map<deviceId, Set<Response>>`. On successful PATCH, all subscribers of that device receive a `device-updated` event.
+**Real-time updates (SSE)** — The server holds an in-memory `Map<deviceId, Set<Response>>`. On successful `PATCH` and again after the sync completes, all subscribers of that device receive a `device-updated` event.
 
-**Configuration** — Stored as a JSON column, making it flexible across device types (lights, thermostats, cameras) without schema migrations. Defaults to `defaultConfiguration` if not provided on create.
+**Soft deletes** — Devices are never hard-deleted. `DELETE /devices/:deviceId` sets `deleted_at`; all list and detail endpoints filter `WHERE deleted_at IS NULL`.
 
 ---
 
@@ -55,7 +54,7 @@ Objectives:
 | POST   | `/devices`                  | Register a new device                    |
 | GET    | `/devices`                  | List all devices for the requesting user |
 | GET    | `/devices/:deviceId`        | Get a specific device by ID              |
-| PATCH  | `/devices/:deviceId`        | Update device status or configuration    |
+| PATCH  | `/devices/:deviceId`        | Send a command to the device             |
 | DELETE | `/devices/:deviceId`        | Soft-delete a device                     |
 | GET    | `/devices/:deviceId/events` | SSE stream for real-time device updates  |
 
@@ -68,20 +67,43 @@ Objectives:
 { "name": "Living Room Light", "status": "enabled", "configuration": { "brightness": 80 } }
 
 // Response 201
-{ "id": "uuid", "name": "Living Room Light", "status": "enabled", "configuration": { "brightness": 80 }, "version": 0, "createdAt": "..." }
+{
+  "id": "uuid",
+  "name": "Living Room Light",
+  "status": "enabled",
+  "configuration": { "brightness": 80 },
+  "desired": null,
+  "version": 0,
+  "createdAt": "..."
+}
 ```
 
 **PATCH /devices/:deviceId**
 
 ```json
-// Request — version is required for optimistic locking
-{ "status": "off", "version": 2 }
+// Request — desired fields only, no version required
+{ "status": "off" }
 
-// Response 200
-{ "id": "uuid", ..., "version": 3 }
+// Response 200 — desired is set, actual (status) is still the confirmed state
+{
+  "id": "uuid",
+  "name": "Living Room Light",
+  "status": "enabled",
+  "configuration": { "brightness": 80 },
+  "desired": { "status": "off" },
+  "version": 1,
+  "updatedAt": "..."
+}
 
-// Response 409 — version mismatch
-{ "error": "Conflict", "message": "Device was updated by someone else, please refresh." }
+// ~1.5 s later, SSE broadcasts the synced state
+{
+  "id": "uuid",
+  "status": "off",
+  "configuration": { "brightness": 80 },
+  "desired": null,
+  "version": 2,
+  "updatedAt": "..."
+}
 ```
 
 ---
@@ -92,9 +114,9 @@ Objectives:
 Device
   id              uuid (PK)
   name            string
-  status          'enabled' | 'sleep' | 'off'
-  configuration   JSON
-  version         integer (starts at 0, incremented on each PATCH)
+  actual          JSON  ← confirmed device state { status, configuration }
+  desired         JSON  ← pending command { status?, configuration? } | null
+  version         integer (incremented on every write)
   created_at      timestamp
   updated_at      timestamp
   deleted_at      timestamp (null until soft-deleted)
@@ -121,8 +143,8 @@ User_Device
 - User–device connection management
 - Reading device history
 
-https://excalidraw.com/#json=4nrLcnWo0jYhfGh7Xc7xv,cdptIrjryoad1Ov_3QaAqA
-![alt text](image.png)
+https://excalidraw.com/#json=JFFAJK8Els1IJbE7S6QUM,rspQOdGrLDpatiNqkCR_Ng
+![alt text](image-1.png)
 
 ---
 
@@ -141,30 +163,9 @@ npm run dev:server
 npm run dev:client
 ```
 
-The database file (`db.sqlite`) is created automatically on first run. Seeded user IDs are printed to the console on startup — use them in the UI user-switcher.
+The database file (`db.sqlite`) is created automatically on first run. Seeds test users.
 
-**Testing multi-user SSE:** Open `http://localhost:5173` in two browser windows. Select different users in the top bar. Make a change in one window and watch it update live in the other.
-
----
-
-## Running in Docker
-
-**Prerequisites:** Docker + Docker Compose
-
-```bash
-# Build and start all services
-docker compose up --build
-
-# Frontend → http://localhost:5173
-# Backend  → http://localhost:3000
-```
-
-```bash
-# Stop and remove containers
-docker compose down
-```
-
-The SQLite database is persisted in a Docker volume so data survives container restarts.
+**Testing multi-user SSE:** Open `http://localhost:5173` in two browser windows. Select different users in the top bar. Make a change in one window and watch both windows update live as the simulated device acknowledges the command ~1.5 s later.
 
 ---
 
@@ -180,8 +181,8 @@ npm run test:unit
 
 Each service function is tested in isolation with a mocked repository:
 
-- `createDevice` — uses `defaultConfiguration` when none provided
-- `updateDevice` — returns conflict error on version mismatch; increments version and calls SSE broadcaster on success
+- `createDevice` — uses `defaultConfiguration` when none provided; creates User_Device links for all seeded users
+- `updateDevice` — writes desired state without touching actual; increments version; broadcasts SSE on success
 - `deleteDevice` — sets `deleted_at`; returns 404 for unknown or unowned device
 - `listDevices` — excludes soft-deleted devices
 
@@ -192,7 +193,7 @@ npm run test:integration
 ```
 
 - `POST /devices` → returns device with generated uuid and `version: 0`
-- `PATCH /devices/:deviceId` with stale version → `409 Conflict`
+- `PATCH /devices/:deviceId` → sets `desired` state, returns updated device with incremented version and unchanged `actual.status`
 - `DELETE /devices/:deviceId` → subsequent `GET /devices` excludes the device
 
 ### E2E — single happy-path flow
@@ -201,7 +202,7 @@ npm run test:integration
 npm run test:e2e
 ```
 
-Register device → update status → assert version incremented → assert `DeviceHistory` row written.
+Register device → send PATCH command → assert `desired.status` set and `actual.status` unchanged → assert version incremented → assert `DeviceHistory` row written.
 
 ### Run all tests
 

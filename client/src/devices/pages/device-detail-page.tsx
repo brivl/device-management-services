@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import type { Device, DeviceStatus } from "@dms/common/types";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import WifiIcon from "@mui/icons-material/Wifi";
+import WifiOffIcon from "@mui/icons-material/WifiOff";
 import {
   Alert,
   Box,
@@ -16,12 +18,10 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import WifiIcon from "@mui/icons-material/Wifi";
-import WifiOffIcon from "@mui/icons-material/WifiOff";
-import type { Device, DeviceStatus } from "@dms/common/types";
-import { devicesApi } from "../api/devices";
-import { useUser } from "../context/UserContext";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { devicesApi } from "../../api/devices";
+import { useUser } from "../../context/user-context";
 
 const MODES = ["auto", "manual", "scheduled"] as const;
 type Mode = (typeof MODES)[number];
@@ -54,7 +54,6 @@ export function DeviceDetailPage() {
   const [mode, setMode] = useState<Mode>("auto");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     if (!deviceId) return;
@@ -93,16 +92,12 @@ export function DeviceDetailPage() {
     if (!device || !deviceId) return;
     setSaving(true);
     setSaveError(null);
-    setSaveSuccess(false);
     try {
       const updated = await devicesApi.update(userId, deviceId, {
         status: editStatus,
         configuration: { brightness, mode },
-        version: device.version,
       });
       setDevice(updated);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2500);
     } catch (e: unknown) {
       setSaveError(e instanceof Error ? e.message : "Failed to save");
     } finally {
@@ -148,7 +143,7 @@ export function DeviceDetailPage() {
             <Typography variant="caption" color="text.secondary">
               Status
             </Typography>
-            <Box mt={0.5}>
+            <Box>
               <Chip
                 label={device.status}
                 color={statusColor(device.status)}
@@ -160,23 +155,19 @@ export function DeviceDetailPage() {
             <Typography variant="caption" color="text.secondary">
               Version
             </Typography>
-            <Typography fontWeight={500}>{device.version}</Typography>
+            <Typography>{device.version}</Typography>
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
               Brightness
             </Typography>
-            <Typography fontWeight={500}>
-              {readBrightness(device.configuration)}%
-            </Typography>
+            <Typography>{readBrightness(device.configuration)}%</Typography>
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
               Mode
             </Typography>
-            <Typography fontWeight={500}>
-              {readMode(device.configuration)}
-            </Typography>
+            <Typography>{readMode(device.configuration)}</Typography>
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
@@ -231,7 +222,6 @@ export function DeviceDetailPage() {
             </Select>
           </FormControl>
           {saveError && <Alert severity="error">{saveError}</Alert>}
-          {saveSuccess && <Alert severity="success">Saved successfully</Alert>}
           <Box>
             <Button
               variant="contained"
