@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
-import { SEEDED_USERS } from "@dms/common";
+import { SEEDED_USERS } from "@dms/common/users";
 
 export { SEEDED_USERS };
 

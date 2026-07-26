@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    "./types": "./src/types.ts",
+    "./users": "./src/users.ts"
   }
 }

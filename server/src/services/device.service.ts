@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import type { CreateDeviceInput, UpdateDeviceInput } from "@dms/common";
+import type { CreateDeviceInput, UpdateDeviceInput } from "@dms/common/types";
 import { deviceRepository } from "../repositories/device.repository.ts";
 import { deviceBroadcaster } from "../sse/device-broadcaster.ts";
 import { NotFoundError, ConflictError } from "../errors.ts";

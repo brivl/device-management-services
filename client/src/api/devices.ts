@@ -1,4 +1,8 @@
-import type { Device, CreateDeviceInput, UpdateDeviceInput } from "@dms/common";
+import type {
+  Device,
+  CreateDeviceInput,
+  UpdateDeviceInput,
+} from "@dms/common/types";
 
 export type { Device, CreateDeviceInput, UpdateDeviceInput };
 

@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { eq } from "drizzle-orm";
-import { SEEDED_USERS } from "@dms/common";
+import { SEEDED_USERS } from "@dms/common/users";
 import { db } from "../db/index.ts";
 import { users } from "../db/schema.ts";
 

@@ -1,5 +1,9 @@
 import type { FastifyInstance } from "fastify";
-import type { Device, CreateDeviceInput, UpdateDeviceInput } from "@dms/common";
+import type {
+  Device,
+  CreateDeviceInput,
+  UpdateDeviceInput,
+} from "@dms/common/types";
 import { deviceService } from "../services/device.service.ts";
 import { deviceBroadcaster } from "../sse/device-broadcaster.ts";
 

@@ -1,4 +1,4 @@
-import { SEEDED_USERS } from "@dms/common";
+import { SEEDED_USERS } from "@dms/common/users";
 import { db } from "./index.ts";
 import { users } from "./schema.ts";
 
