@@ -8,6 +8,8 @@ dist-ssr/
 # SQLite databases
 *.sqlite
 *.db
+*.sqlite-shm
+*.sqlite-wal
 
 # Logs
 *.log
