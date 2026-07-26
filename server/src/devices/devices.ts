@@ -1,10 +1,10 @@
-import type { FastifyInstance } from "fastify";
 import type {
-  Device,
   CreateDeviceInput,
+  Device,
   UpdateDeviceInput,
 } from "@dms/common/types";
-import { deviceService } from "../services/device.service.ts";
+import type { FastifyInstance } from "fastify";
+import { deviceService } from "../devices/device.service.ts";
 import { deviceBroadcaster } from "../sse/device-broadcaster.ts";
 
 export async function deviceRoutes(app: FastifyInstance) {

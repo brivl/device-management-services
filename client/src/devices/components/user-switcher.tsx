@@ -1,6 +1,6 @@
 import { SEEDED_USERS } from "@dms/common/users";
 import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
-import { useUser } from "../context/UserContext";
+import { useUser } from "../../context/user-context";
 
 export function UserSwitcher() {
   const { userId, setUserId } = useUser();

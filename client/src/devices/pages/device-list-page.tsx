@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
-import { Box, Button, Typography } from "@mui/material";
+import type { CreateDeviceInput, Device } from "@dms/common/types";
 import AddIcon from "@mui/icons-material/Add";
-import type { Device, CreateDeviceInput } from "@dms/common/types";
-import { devicesApi } from "../api/devices";
-import { useUser } from "../context/UserContext";
-import { DeviceTable } from "../components/DeviceTable";
-import { CreateDeviceDialog } from "../components/CreateDeviceDialog";
+import { Box, Button, Typography } from "@mui/material";
+import { useCallback, useEffect, useState } from "react";
+import { devicesApi } from "../../api/devices";
+import { useUser } from "../../context/user-context";
+import { CreateDeviceDialog } from "../components/create-device-dialog";
+import { DeviceTable } from "../components/device-table";
 
 export function DeviceListPage() {
   const { userId } = useUser();

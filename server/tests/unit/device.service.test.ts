@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/repositories/device.repository.ts", () => ({
   deviceRepository: {
@@ -17,10 +17,10 @@ vi.mock("../../src/sse/device-broadcaster.ts", () => ({
   deviceBroadcaster: { broadcast: vi.fn() },
 }));
 
-import { deviceRepository } from "../../src/repositories/device.repository.ts";
+import { deviceRepository } from "../../src/devices/device.repository.ts";
+import { deviceService } from "../../src/devices/device.service.ts";
+import { ConflictError, NotFoundError } from "../../src/errors.ts";
 import { deviceBroadcaster } from "../../src/sse/device-broadcaster.ts";
-import { deviceService } from "../../src/services/device.service.ts";
-import { NotFoundError, ConflictError } from "../../src/errors.ts";
 
 const repo = vi.mocked(deviceRepository);
 const broadcaster = vi.mocked(deviceBroadcaster);

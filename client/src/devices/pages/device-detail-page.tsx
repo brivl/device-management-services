@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import type { Device, DeviceStatus } from "@dms/common/types";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import WifiIcon from "@mui/icons-material/Wifi";
+import WifiOffIcon from "@mui/icons-material/WifiOff";
 import {
   Alert,
   Box,
@@ -16,12 +18,10 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import WifiIcon from "@mui/icons-material/Wifi";
-import WifiOffIcon from "@mui/icons-material/WifiOff";
-import type { Device, DeviceStatus } from "@dms/common/types";
-import { devicesApi } from "../api/devices";
-import { useUser } from "../context/UserContext";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { devicesApi } from "../../api/devices";
+import { useUser } from "../../context/user-context";
 
 const MODES = ["auto", "manual", "scheduled"] as const;
 type Mode = (typeof MODES)[number];
@@ -143,7 +143,7 @@ export function DeviceDetailPage() {
             <Typography variant="caption" color="text.secondary">
               Status
             </Typography>
-            <Box mt={0.5}>
+            <Box>
               <Chip
                 label={device.status}
                 color={statusColor(device.status)}
@@ -155,23 +155,19 @@ export function DeviceDetailPage() {
             <Typography variant="caption" color="text.secondary">
               Version
             </Typography>
-            <Typography fontWeight={500}>{device.version}</Typography>
+            <Typography>{device.version}</Typography>
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
               Brightness
             </Typography>
-            <Typography fontWeight={500}>
-              {readBrightness(device.configuration)}%
-            </Typography>
+            <Typography>{readBrightness(device.configuration)}%</Typography>
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
               Mode
             </Typography>
-            <Typography fontWeight={500}>
-              {readMode(device.configuration)}
-            </Typography>
+            <Typography>{readMode(device.configuration)}</Typography>
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">

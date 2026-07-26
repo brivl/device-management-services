@@ -8,11 +8,8 @@ import type {
 import { SEEDED_USERS } from "@dms/common/users";
 import { v4 as uuidv4 } from "uuid";
 import { ConflictError, NotFoundError } from "../errors.ts";
-import {
-  deviceRepository,
-  type DeviceRow,
-} from "../repositories/device.repository.ts";
 import { deviceBroadcaster } from "../sse/device-broadcaster.ts";
+import { deviceRepository, type DeviceRow } from "./device.repository.ts";
 
 const defaultConfiguration = { brightness: 100, mode: "auto" };
 

@@ -1,9 +1,16 @@
-import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
-import { AppBar, Toolbar, Typography, Box } from "@mui/material";
-import { Routes, Route } from "react-router-dom";
-import { UserSwitcher } from "./components/UserSwitcher";
-import { DeviceListPage } from "./pages/DeviceListPage";
-import { DeviceDetailPage } from "./pages/DeviceDetailPage";
+import {
+  AppBar,
+  Box,
+  CssBaseline,
+  ThemeProvider,
+  Toolbar,
+  Typography,
+  createTheme,
+} from "@mui/material";
+import { Route, Routes } from "react-router-dom";
+import { UserSwitcher } from "./devices/components/user-switcher";
+import { DeviceDetailPage } from "./devices/pages/device-detail-page";
+import { DeviceListPage } from "./devices/pages/device-list-page";
 
 const theme = createTheme();
 

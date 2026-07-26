@@ -21,21 +21,19 @@ Objectives:
 
 ## Tech Stack
 
-| Layer   | Technology           |
-| ------- | -------------------- |
-| Backend | TypeScript + Fastify |
-| ORM     | Drizzle ORM          |
-| Database| SQLite               |
-| Frontend| React + MUI          |
-| Testing | Vitest               |
+| Layer    | Technology           |
+| -------- | -------------------- |
+| Backend  | TypeScript + Fastify |
+| ORM      | Drizzle ORM          |
+| Database | SQLite               |
+| Frontend | React + MUI          |
+| Testing  | Vitest               |
 
 ---
 
 ## Architecture & Key Design Decisions
 
-**Auth simulation** — User creation and auth are out of scope. At startup, 2–3 users are seeded into the DB. All requests require an `X-User-Id` header; a Fastify `preHandler` validates it against seeded users and attaches the user to the request context. The React UI provides a user-switcher in the top bar — open two browser windows with different users to observe SSE updates live.
-
-**Soft deletes** — Devices are never hard-deleted. `DELETE /devices/:deviceId` sets `deleted_at`; all list and detail endpoints filter `WHERE deleted_at IS NULL`.
+Following REST API best practices. Backend is split in vertical layers: routes (controllers) -> services -> repositories for clean separation of concerns and ease of testing when we need to mock different layers.
 
 **Desired / actual state (IoT shadow pattern)** — `PATCH` writes the requested change to a `desired` JSON column and returns immediately. A simulated device acknowledgement fires ~1.5 s later: the server reads `desired`, merges it into `actual`, clears `desired`, and broadcasts the updated device via SSE. This mirrors how AWS IoT Device Shadow works — the cloud accepts commands instantly, and the physical device applies them asynchronously. The frontend displays the device's confirmed `actual` state and receives the live update over SSE with no polling needed.
 
@@ -45,7 +43,7 @@ Version is managed server-side and incremented on every write (both on PATCH and
 
 **Real-time updates (SSE)** — The server holds an in-memory `Map<deviceId, Set<Response>>`. On successful `PATCH` and again after the sync completes, all subscribers of that device receive a `device-updated` event.
 
-**Configuration** — Stored inside the `actual` JSON column, making it flexible across device types (lights, thermostats, cameras) without schema migrations. Defaults to `{ brightness: 100, mode: "auto" }` if not provided on create.
+**Soft deletes** — Devices are never hard-deleted. `DELETE /devices/:deviceId` sets `deleted_at`; all list and detail endpoints filter `WHERE deleted_at IS NULL`.
 
 ---
 
@@ -139,16 +137,14 @@ User_Device
   device_id       uuid (FK → Device)
 ```
 
-The API flattens `actual` into top-level `status` / `configuration` fields on all responses so the frontend works with a simple, flat shape.
-
 **Out of scope (assumed to exist)**
 
 - User creation & authentication
 - User–device connection management
 - Reading device history
 
-https://excalidraw.com/#json=4nrLcnWo0jYhfGh7Xc7xv,cdptIrjryoad1Ov_3QaAqA
-![alt text](image.png)
+https://excalidraw.com/#json=JFFAJK8Els1IJbE7S6QUM,rspQOdGrLDpatiNqkCR_Ng
+![alt text](image-1.png)
 
 ---
 
@@ -167,7 +163,7 @@ npm run dev:server
 npm run dev:client
 ```
 
-The database file (`db.sqlite`) is created automatically on first run. Seeded user IDs are printed to the console on startup — use them in the UI user-switcher.
+The database file (`db.sqlite`) is created automatically on first run. Seeds test users.
 
 **Testing multi-user SSE:** Open `http://localhost:5173` in two browser windows. Select different users in the top bar. Make a change in one window and watch both windows update live as the simulated device acknowledges the command ~1.5 s later.
 
