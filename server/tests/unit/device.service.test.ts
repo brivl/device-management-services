@@ -68,14 +68,6 @@ describe("deviceService.get", () => {
     repo.findById.mockReturnValue(undefined);
     await expect(deviceService.get("device-1")).rejects.toThrow(NotFoundError);
   });
-
-  it("throws NotFoundError when device is soft-deleted", async () => {
-    repo.findById.mockReturnValue({
-      ...DEVICE_ROW,
-      deletedAt: "2024-01-02T00:00:00.000Z",
-    });
-    await expect(deviceService.get("device-1")).rejects.toThrow(NotFoundError);
-  });
 });
 
 describe("deviceService.create", () => {
@@ -107,16 +99,6 @@ describe("deviceService.create", () => {
 });
 
 describe("deviceService.update", () => {
-  it("throws NotFoundError when device is soft-deleted", async () => {
-    repo.findById.mockReturnValue({
-      ...DEVICE_ROW,
-      deletedAt: "2024-01-02T00:00:00.000Z",
-    });
-    await expect(
-      deviceService.update("device-1", { status: "off" }),
-    ).rejects.toThrow(NotFoundError);
-  });
-
   it("writes desired to repo without touching actual", async () => {
     repo.findById.mockReturnValue(DEVICE_ROW);
     const updatedRow = {

@@ -1,5 +1,6 @@
 import type { CreateDeviceInput, DeviceStatus } from "@dms/common/types";
 import {
+  Alert,
   Box,
   Button,
   Dialog,
@@ -41,6 +42,7 @@ const DEFAULT_FORM: FormState = {
 export function CreateDeviceDialog({ open, onClose, onCreate }: Props) {
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const set =
     <K extends keyof FormState>(key: K) =>
@@ -50,6 +52,7 @@ export function CreateDeviceDialog({ open, onClose, onCreate }: Props) {
   const handleSubmit = async () => {
     if (!form.name.trim()) return;
     setSubmitting(true);
+    setError(null);
     try {
       await onCreate({
         name: form.name.trim(),
@@ -57,6 +60,8 @@ export function CreateDeviceDialog({ open, onClose, onCreate }: Props) {
         configuration: { brightness: form.brightness, mode: form.mode },
       });
       setForm(DEFAULT_FORM);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create device");
     } finally {
       setSubmitting(false);
     }
@@ -116,6 +121,7 @@ export function CreateDeviceDialog({ open, onClose, onCreate }: Props) {
             ))}
           </Select>
         </FormControl>
+        {error && <Alert severity="error">{error}</Alert>}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>

@@ -11,10 +11,7 @@ const BASE = "/api/devices";
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(BASE + path, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
+    headers: { "Content-Type": "application/json", ...init?.headers },
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -42,7 +39,11 @@ export const devicesApi = {
       body: JSON.stringify(data),
     }),
 
-  delete: (id: string) => fetch(`${BASE}/${id}`, { method: "DELETE" }),
+  delete: async (id: string) => {
+    const res = await fetch(`${BASE}/${id}`, { method: "DELETE" });
+    if (!res.ok)
+      throw Object.assign(new Error(res.statusText), { status: res.status });
+  },
 
   events: (id: string) => new EventSource(`${BASE}/${id}/events`),
 };

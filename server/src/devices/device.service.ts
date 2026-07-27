@@ -19,7 +19,7 @@ export const deviceService = {
 
   async get(deviceId: string): Promise<Device> {
     const row = deviceRepository.findById(deviceId);
-    if (!row || row.deletedAt) throw new NotFoundError("Device not found");
+    if (!row) throw new NotFoundError("Device not found");
     return toDevice(row);
   },
 

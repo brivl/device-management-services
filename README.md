@@ -122,7 +122,7 @@ npm run test:unit
 Each service function is tested in isolation with a mocked repository:
 
 - `createDevice` — uses `defaultConfiguration` when none provided
-- `updateDevice` — writes desired state without touching actual; increments version; broadcasts SSE on success
+- `updateDevice` — writes desired state without touching actual; increments version; defers SSE broadcast to async scheduleSync
 - `deleteDevice` — sets `deleted_at`; returns 404 for unknown device
 - `listDevices` — returns only non-deleted devices
 
@@ -133,7 +133,7 @@ npm run test:integration
 ```
 
 - `POST /devices` → returns device with generated uuid and `version: 0`
-- `PATCH /devices/:deviceId` → sets `desired` state, returns updated device with incremented version and unchanged `actual.status`
+- `PATCH /devices/:deviceId` → accepts command, returns device with incremented version; status unchanged until device acknowledges (~1.5 s)
 - `DELETE /devices/:deviceId` → subsequent `GET /devices` excludes the device
 
 ### E2E — single happy-path flow
@@ -142,7 +142,7 @@ npm run test:integration
 npm run test:e2e
 ```
 
-Register device → send PATCH command → assert `desired.status` set and `actual.status` unchanged → assert version incremented → assert `DeviceHistory` row written.
+Register device → send PATCH command → assert `status` still reflects actual (unchanged) → assert version incremented → assert `DeviceHistory` row written.
 
 ### Run all tests
 
