@@ -21,27 +21,23 @@ Objectives:
 
 ## Tech Stack
 
-| Layer    | Technology           |
-| -------- | -------------------- |
-| Backend  | TypeScript + Fastify |
-| ORM      | Drizzle ORM          |
-| Database | SQLite               |
-| Frontend | React + MUI          |
-| Testing  | Vitest               |
+| Layer    | Technology                                  |
+| -------- | ------------------------------------------- |
+| Backend  | TypeScript + Fastify + Drizzle ORM + SQLite |
+| Frontend | React + MUI                                 |
+| Testing  | Vitest                                      |
 
 ---
 
 ## Approach & Challenges
 
-The backend is split into vertical slices (routes → service → repository), keeping each layer independently testable. Devices support full CRUD with soft deletes, server-managed versioning, and a history table that snapshots every command for audit.
+The backend is split into vertical slices (routes → service → repository), keeping each layer independently testable. Devices support full CRUD with soft deletes, server-managed versioning, and a history table that snapshots every change for audit. Followed TDD approach.
 
 Real-time updates are delivered over SSE — the server keeps an in-memory subscriber map per device and pushes events when state changes.
 
 The main design challenge was the update flow. Optimistic locking was the obvious first choice, but IoT devices don't fit that model — state can change from either side (API or directly from device), so treating both as competing writes creates unnecessary conflicts. The solution is the **desired / actual state pattern** (the same model AWS IoT Device Shadow uses): `PATCH` stores the command in a `desired` column and returns immediately without waiting for the hardware. A simulated acknowledgement fires ~1.5 s later, applies `desired` into `actual`, and broadcasts the confirmed state over SSE. The client only ever sees confirmed state.
 
 Claude Code was used mainly for boilerplate writing and research purposes; all decisions were made by myself.
-
-TDD approach was used for each feature.
 
 ---
 
@@ -83,8 +79,21 @@ DeviceHistory
 - Authentication / user management — in a production system each request would carry a token validated server-side, and devices would be associated to users via a `user_devices` junction table. The API surface would be unchanged; the service layer would add ownership checks using the resolved user identity.
 - Reading device history — the audit trail is written on every PATCH but there is no GET endpoint for it.
 
-https://excalidraw.com/#json=JFFAJK8Els1IJbE7S6QUM,rspQOdGrLDpatiNqkCR_Ng
-![alt text](image-1.png)
+https://excalidraw.com/#json=SUIotB1Ym92ZAdviCewtB,1RlTdL2UTF_ZvRc4xrMQwg
+![alt text](image.png)
+
+---
+
+## Running with Docker
+
+```bash
+docker compose up --build
+```
+
+- Frontend: http://localhost:8080
+- API: http://localhost:3000
+
+The SQLite database is persisted in a named Docker volume (`sqlite_data`).
 
 ---
 

@@ -1,0 +1,24 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    environment:
+      DATABASE_URL: /app/data/db.sqlite
+      PORT: "3000"
+    volumes:
+      - sqlite_data:/app/data
+    ports:
+      - "3000:3000"
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    ports:
+      - "8080:80"
+    depends_on:
+      - server
+
+volumes:
+  sqlite_data:

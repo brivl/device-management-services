@@ -68,8 +68,10 @@ export function DeviceDetailPage() {
 
   useEffect(() => {
     if (!deviceId) return;
+
     setLoading(true);
     setFetchError(null);
+
     devicesApi
       .get(deviceId)
       .then((d) => {
@@ -84,7 +86,9 @@ export function DeviceDetailPage() {
 
   useEffect(() => {
     if (!deviceId) return;
+
     const es = devicesApi.events(deviceId);
+
     es.onopen = () => setSseConnected(true);
     es.onerror = () => setSseConnected(false);
     es.addEventListener("device-updated", (e) => {
@@ -92,6 +96,7 @@ export function DeviceDetailPage() {
       setDevice(updated);
       setForm(formFromDevice(updated));
     });
+
     return () => {
       es.close();
       setSseConnected(false);
@@ -100,8 +105,10 @@ export function DeviceDetailPage() {
 
   const handleSave = async () => {
     if (!device || !deviceId) return;
+
     setSaving(true);
     setSaveError(null);
+
     try {
       await devicesApi.update(deviceId, {
         status: form.status,

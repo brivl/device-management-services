@@ -7,6 +7,27 @@ import type { FastifyInstance } from "fastify";
 import { deviceService } from "./device.service.ts";
 import { deviceBroadcaster } from "../sse/device-broadcaster.ts";
 
+const deviceSchema = {
+  type: "object",
+  properties: {
+    id: { type: "string" },
+    name: { type: "string" },
+    status: { type: "string", enum: ["enabled", "sleep", "off"] },
+    configuration: { type: "object" },
+    version: { type: "number" },
+    createdAt: { type: "string" },
+    updatedAt: { type: "string" },
+  },
+};
+
+const errorSchema = {
+  type: "object",
+  properties: {
+    error: { type: "string" },
+    message: { type: "string" },
+  },
+};
+
 export async function deviceRoutes(app: FastifyInstance) {
   app.post<{ Body: CreateDeviceInput; Reply: Device }>(
     "/",
@@ -21,6 +42,10 @@ export async function deviceRoutes(app: FastifyInstance) {
             configuration: { type: "object" },
           },
         },
+        response: {
+          201: deviceSchema,
+          400: errorSchema,
+        },
       },
     },
     async (request, reply) => {
@@ -29,12 +54,30 @@ export async function deviceRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get<{ Reply: Device[] }>("/", async (_request, reply) => {
-    return reply.send(await deviceService.list());
-  });
+  app.get<{ Reply: Device[] }>(
+    "/",
+    {
+      schema: {
+        response: {
+          200: { type: "array", items: deviceSchema },
+        },
+      },
+    },
+    async (_request, reply) => {
+      return reply.send(await deviceService.list());
+    },
+  );
 
   app.get<{ Params: { deviceId: string }; Reply: Device }>(
     "/:deviceId",
+    {
+      schema: {
+        response: {
+          200: deviceSchema,
+          404: errorSchema,
+        },
+      },
+    },
     async (request, reply) => {
       return reply.send(await deviceService.get(request.params.deviceId));
     },
@@ -55,6 +98,11 @@ export async function deviceRoutes(app: FastifyInstance) {
             configuration: { type: "object" },
           },
         },
+        response: {
+          200: deviceSchema,
+          400: errorSchema,
+          404: errorSchema,
+        },
       },
     },
     async (request, reply) => {
@@ -66,6 +114,14 @@ export async function deviceRoutes(app: FastifyInstance) {
 
   app.delete<{ Params: { deviceId: string } }>(
     "/:deviceId",
+    {
+      schema: {
+        response: {
+          204: { type: "null" },
+          404: errorSchema,
+        },
+      },
+    },
     async (request, reply) => {
       await deviceService.delete(request.params.deviceId);
       return reply.status(204).send();

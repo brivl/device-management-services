@@ -15,6 +15,7 @@ export function DeviceListPage() {
   const fetchDevices = useCallback(async () => {
     setLoading(true);
     setError(null);
+
     try {
       setDevices(await devicesApi.list());
     } catch (e) {
@@ -24,9 +25,7 @@ export function DeviceListPage() {
     }
   }, []);
 
-  useEffect(() => {
-    void fetchDevices();
-  }, [fetchDevices]);
+  useEffect(() => void fetchDevices(), [fetchDevices]);
 
   const handleCreate = async (data: CreateDeviceInput) => {
     await devicesApi.create(data);
