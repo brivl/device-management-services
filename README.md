@@ -16,7 +16,7 @@ Objectives:
   Implement an endpoint to delete a specific device from the system. The response should confirm the deletion.
 - Device History
 - Frontend UI for all operations
-
+- Real time updates
 ---
 
 ## Tech Stack
