@@ -1,5 +1,9 @@
 {
   "name": "device-management-services",
   "private": true,
-  "workspaces": ["common", "server", "client"]
+  "workspaces": ["common", "server", "client"],
+  "scripts": {
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client"
+  }
 }
